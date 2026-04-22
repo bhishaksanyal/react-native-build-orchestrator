@@ -1,13 +1,13 @@
 {
-  "name": "react-native-build-helper",
+  "name": "react-native-build-orchestrator",
   "version": "1.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bhishaksanyal/react-native-build-helper.git"
+    "url": "https://github.com/bhishaksanyal/react-native-build-orchestrator.git"
   },
-  "homepage": "https://github.com/bhishaksanyal/react-native-build-helper#readme",
+  "homepage": "https://github.com/bhishaksanyal/react-native-build-orchestrator#readme",
   "bugs": {
-    "url": "https://github.com/bhishaksanyal/react-native-build-helper/issues"
+    "url": "https://github.com/bhishaksanyal/react-native-build-orchestrator/issues"
   },
   "main": "dist/index.js",
   "scripts": {
@@ -20,7 +20,7 @@
   },
   "keywords": [
     "react-native",
-    "react-native-build-helper",
+    "react-native-build-orchestrator",
     "rnbuild",
     "react-native-cli",
     "react-native-tools",

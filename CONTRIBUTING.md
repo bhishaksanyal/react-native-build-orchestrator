@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to react-native-build-helper.
+Thanks for contributing to react-native-build-orchestrator.
 
 ## Development Setup
 

@@ -1,11 +1,11 @@
-# Testing react-native-build-helper
+# Testing react-native-build-orchestrator
 
 ## Quick Local Testing
 
 ### 1. Install locally using yarn link
 
 ```bash
-cd /path/to/react-native-build-helper
+cd /path/to/react-native-build-orchestrator
 yarn build
 yarn link
 ```
@@ -16,7 +16,7 @@ This makes `rnbuild` available globally on your system.
 
 ```bash
 cd /path/to/react-native-project
-yarn link react-native-build-helper
+yarn link react-native-build-orchestrator
 rnbuild --help
 ```
 
@@ -50,8 +50,8 @@ rnbuild init
 cat .rnbuildrc.yml
 
 # Link back to local workspace
-cd /path/to/react-native-build-helper
-yarn link react-native-build-helper
+cd /path/to/react-native-build-orchestrator
+yarn link react-native-build-orchestrator
 ```
 
 #### Scenario B: Manage environments
@@ -165,7 +165,7 @@ rnbuild build --env production --type store --platform android --dry-run  # Prev
 If you want to test without installing globally:
 
 ```bash
-cd /path/to/react-native-build-helper
+cd /path/to/react-native-build-orchestrator
 yarn dev init
 yarn dev doctor
 yarn dev build
@@ -205,10 +205,10 @@ When done testing:
 
 ```bash
 cd /path/to/react-native-project
-yarn unlink react-native-build-helper
+yarn unlink react-native-build-orchestrator
 
 # Or unlink from the package directory
-cd /path/to/react-native-build-helper
+cd /path/to/react-native-build-orchestrator
 yarn unlink
 ```
 

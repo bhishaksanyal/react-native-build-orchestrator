@@ -227,8 +227,8 @@ function analyzeRunFailure(lines: string[], platform: Platform | "unknown"): str
 
   return [
     "Detected react-native-config native iOS sources (`GeneratedDotEnv.m`, `RNCConfig.m`) failing to compile.",
-    "If you are migrating to react-native-build-helper for env access, remove `react-native-config` from the consumer app, run `cd ios && pod install`, then clean DerivedData / Xcode build folder.",
-    "If the app still uses `react-native-config` natively, this is an iOS integration issue in the consumer app rather than a react-native-build-helper run command issue."
+    "If you are migrating to react-native-build-orchestrator for env access, remove `react-native-config` from the consumer app, run `cd ios && pod install`, then clean DerivedData / Xcode build folder.",
+    "If the app still uses `react-native-config` natively, this is an iOS integration issue in the consumer app rather than a react-native-build-orchestrator run command issue."
   ];
 }
 

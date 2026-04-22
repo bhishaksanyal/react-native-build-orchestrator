@@ -1,4 +1,4 @@
-# react-native-build-helper
+# react-native-build-orchestrator
 
 CLI workflow manager for React Native projects that standardizes environment handling, flavor-aware Android/iOS builds, version updates, and Fastlane uploads.
 
@@ -32,13 +32,13 @@ React Native release pipelines often drift across projects because build command
 ## Installation
 
 ```bash
-yarn add -D react-native-build-helper
+yarn add -D react-native-build-orchestrator
 ```
 
 Run without installation:
 
 ```bash
-yarn dlx react-native-build-helper init
+yarn dlx react-native-build-orchestrator init
 ```
 
 ## Quick Start
