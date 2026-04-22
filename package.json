@@ -1,0 +1,81 @@
+{
+  "name": "react-native-build-helper",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bhishaksanyal/react-native-build-helper.git"
+  },
+  "homepage": "https://github.com/bhishaksanyal/react-native-build-helper#readme",
+  "bugs": {
+    "url": "https://github.com/bhishaksanyal/react-native-build-helper/issues"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "yarn typecheck && yarn lint",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts",
+    "prepare": "yarn build"
+  },
+  "keywords": [
+    "react-native",
+    "react-native-build-helper",
+    "rnbuild",
+    "react-native-cli",
+    "react-native-tools",
+    "mobile-devops",
+    "android",
+    "ios",
+    "build",
+    "build-automation",
+    "release",
+    "release-automation",
+    "versioning",
+    "environment-management",
+    "env",
+    "dotenv",
+    "flavor",
+    "white-label",
+    "fastlane",
+    "play-store",
+    "app-store",
+    "deployment"
+  ],
+  "author": "Bhishak Sanyal <sanyalbishak93@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "description": "CLI for React Native environment management, flavor-aware Android/iOS builds, versioning, and Fastlane store uploads.",
+  "type": "module",
+  "bin": {
+    "rnbuild": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "cli-table": "^0.3.11",
+    "commander": "^12.1.0",
+    "execa": "^9.6.1",
+    "fs-extra": "^11.3.4",
+    "js-yaml": "^4.1.1",
+    "picocolors": "^1.0.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/cli-table": "^0.3.4",
+    "@types/fs-extra": "^11.0.4",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.19.17",
+    "@typescript-eslint/eslint-plugin": "^8.58.1",
+    "@typescript-eslint/parser": "^8.58.1",
+    "eslint": "^9.39.4",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "yarn@3.6.0+sha512.418e45c2268c4d6b69a28f3939084b5853d5f392c43c0b5588bd1995a96e328414ae4b7777a8980c64bad4328c52586ff879b289f98ae65372a55fa4d0ff70dd"
+}
