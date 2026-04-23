@@ -1,0 +1,81 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+
+# Testing
+coverage/
+.nyc_output/
+
+# React Native
+.babelrc
+.babelrc.js
+.flowconfig
+__generated__
+
+# Build output
+dist/
+build/
+*.apk
+*.jks
+*.ipa
+*.app
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+ios/.xcode.env
+ios/build/
+Derived Data/
+*.xcworkspace/xcuserdata/
+
+# Android
+android/.gradle
+android/gradle
+android/local.properties
+android/app/debug
+android/app/release
+android/build/
+
+# Environment
+.env.local
+.env.*.local
+rnbuild.env.ts
+src/config/env.ts
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+fastlane/.env.default
+
+# Temporary files
+*.tmp
+tmp/
+temp/

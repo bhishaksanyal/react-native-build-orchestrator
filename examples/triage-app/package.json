@@ -1,0 +1,34 @@
+{
+  "name": "triage-app",
+  "version": "1.0.0",
+  "description": "Example React Native triage application demonstrating react-native-build-orchestrator",
+  "main": "index.ts",
+  "scripts": {
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "build:android:dev": "rnbuild build --env development --type android",
+    "build:android:prod": "rnbuild build --env production --type android",
+    "build:ios:dev": "rnbuild build --env development --type ios",
+    "build:ios:prod": "rnbuild build --env production --type ios",
+    "release:check": "rnbuild version current",
+    "release:patch": "rnbuild version patch",
+    "release:minor": "rnbuild version minor",
+    "release:major": "rnbuild version major",
+    "upload:ios": "rnbuild upload --platform ios",
+    "upload:android": "rnbuild upload --platform android"
+  },
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-native": "^0.76.0",
+    "react-native-dotenv": "^3.3.1"
+  },
+  "devDependencies": {
+    "@react-native/metro-config": "^0.73.0",
+    "react-native-build-orchestrator": "file:../..",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  }
+}

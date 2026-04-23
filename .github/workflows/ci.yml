@@ -13,9 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: yarnpkg/action-setup@v4
-        with:
-          version: latest
+          cache: yarn
       - run: yarn install --frozen-lockfile
       - run: yarn test
       - run: yarn build
