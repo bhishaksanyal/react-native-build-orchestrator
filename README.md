@@ -55,11 +55,8 @@ yarn rnbuild doctor
 # 3) Run debug app with selected env
 yarn rnbuild run
 
-# 4) Build release artifact
-yarn rnbuild build --env production --type store --platform android --android-artifact bundle
-
-# 5) Upload using fastlane defaults
-yarn rnbuild upload --env production --platform android
+# 4) Build and upload to store in one command
+yarn rnbuild release --env production --platform android --type store
 ```
 
 ## Commands
@@ -144,26 +141,28 @@ yarn rnbuild fastlane setup
 yarn rnbuild fastlane setup --force
 ```
 
-### upload
-
-Runs Fastlane lane for selected platform.
-
-```bash
-yarn rnbuild upload
-yarn rnbuild upload --env production --platform android --lane upload_store --track internal
-yarn rnbuild upload --env production --platform android --lane upload_store --artifact-type aab --artifact-path android/app/build/outputs/bundle/release/app-release.aab
-```
-
 ### release
 
-Single pipeline command that chooses options once, builds, resolves artifact, then uploads.
+Builds and uploads to store in one unified pipeline. **Always builds first, then uploads** for any chosen environment, platform, flavor, and artifact type.
 
 ```bash
+# Interactive prompts for environment, platform, flavor, build type, lane, and track
 yarn rnbuild release
+
+# Non-interactive: Android AAB to internal track
 yarn rnbuild release --env production --platform android --type store --android-artifact bundle --lane upload_store --track internal
-yarn rnbuild release --env production --platform ios --type store --ios-artifact ipa --artifact-path ios/build/MyApp.ipa --lane upload_store --track testflight
-yarn rnbuild release --skip-build --env production --platform ios --lane upload_store --track testflight
-yarn rnbuild release --dry-run --env production --platform android
+
+# Non-interactive: iOS to TestFlight
+yarn rnbuild release --env production --platform ios --type store --lane upload_store --track testflight
+
+# With custom artifact path
+yarn rnbuild release --env production --platform android --type store --artifact-path android/app/build/outputs/bundle/release/app-release.aab
+
+# Dry run: preview build and upload commands without executing
+yarn rnbuild release --env production --platform android --dry-run
+
+# Fast mode: apply platform optimizations for faster builds
+yarn rnbuild release --env production --platform ios --type store --fast
 ```
 
 ## Configuration
@@ -212,7 +211,7 @@ builds:
 
 ## Runtime Environment Exports
 
-Before `run`, `build`, and `upload`, the tool writes:
+Before `run`, `build`, and `release`, the tool writes:
 
 - `.rnbuild/active.env`
 - `rnbuild.env.ts`

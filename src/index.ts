@@ -10,7 +10,6 @@ import { runFastlaneSetupCommand } from "./commands/fastlane.js";
 import { runFlavorCommand } from "./commands/flavor.js";
 import { runReleaseCommand } from "./commands/release.js";
 import { runAppCommand } from "./commands/run.js";
-import { runUploadCommand } from "./commands/upload.js";
 import { runVersionCommand } from "./commands/version.js";
 
 program
@@ -72,7 +71,7 @@ program
 
 program
   .command("release")
-  .description("Run build then upload in one flow")
+  .description("Build and upload to store in one flow (always builds first, then uploads)")
   .option("-e, --env <name>", "Environment name from config")
   .option("-t, --type <buildType>", "Build type: development | adhoc | store (default: store)")
   .option("-p, --platform <platform>", "Platform: android | ios")
@@ -83,7 +82,6 @@ program
   .option("-l, --lane <name>", "Fastlane lane name (default from config or upload_store)")
   .option("--track <name>", "Store track/destination (android: internal/beta/... , ios: testflight/app_store)")
   .option("--cwd <path>", "Project path (defaults to current directory)")
-  .option("--skip-build", "Skip build step and run upload only")
   .option("--fast", "Apply platform fast-track flags for faster archives/builds")
   .option("--raw-logs", "Print raw logs instead of styled output")
   .option("--dry-run", "Preview build command and skip upload")
@@ -99,7 +97,6 @@ program
       lane?: string;
       track?: string;
       cwd?: string;
-      skipBuild?: boolean;
       fast?: boolean;
       rawLogs?: boolean;
       dryRun?: boolean;
@@ -137,40 +134,6 @@ program
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(pc.red(`run failed: ${message}`));
-        process.exitCode = 1;
-      }
-    }
-  );
-
-program
-  .command("upload")
-  .description("Upload store build using Fastlane")
-  .option("-e, --env <name>", "Environment name from config")
-  .option("-p, --platform <platform>", "Platform: android | ios")
-  .option("-f, --flavor <name>", "Optional platform flavor")
-  .option("-l, --lane <name>", "Fastlane lane name (default: upload_store)")
-  .option("--track <name>", "Store track/destination (android: internal/beta/... , ios: testflight/app_store)")
-  .option("--artifact-type <type>", "Artifact type hint for lane: apk | aab | ipa")
-  .option("--artifact-path <path>", "Explicit artifact path for lane upload")
-  .option("--cwd <path>", "Project path (defaults to current directory)")
-  .option("--raw-logs", "Print raw fastlane logs instead of styled output")
-  .action(
-    async (options: {
-      env?: string;
-      platform?: string;
-      flavor?: string;
-      lane?: string;
-      track?: string;
-      artifactType?: string;
-      artifactPath?: string;
-      cwd?: string;
-      rawLogs?: boolean;
-    }) => {
-      try {
-        await runUploadCommand(options);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(pc.red(`upload failed: ${message}`));
         process.exitCode = 1;
       }
     }
