@@ -2,6 +2,8 @@
 
 CLI workflow manager for React Native projects that standardizes environment handling, flavor-aware Android/iOS builds, version updates, and Fastlane uploads.
 
+![React Native Build Orchestrator - Streamline Your Builds](./assets/hero.png)
+
 ## Why use it
 
 React Native release pipelines often drift across projects because build commands, env files, schemes, and store steps are handled differently by each team. This package provides one command-line workflow to:
