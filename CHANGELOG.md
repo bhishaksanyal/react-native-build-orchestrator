@@ -1,3 +1,14 @@
+## [1.0.3](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.2...v1.0.3) (2026-04-26)
+
+### ⚡ Performance
+
+* Testing release automation ([0498f5d](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/0498f5d10893ce849225f5edebf0adeb6b970cc3))
+* Testing release automation ([e085ed6](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/e085ed69bd50b80a1e30ec26b55644474ca3b7a7))
+
+### 📚 Documentation
+
+* Changelog added ([98509b8](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/98509b8d64e245b1c7b8a2509e79b81b324c2616))
+
 # Changelog
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
