@@ -26,13 +26,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.14.0
           cache: yarn
 
-      - name: Install dependencies
+      - name: Setup Yarn (Corepack)
         run: |
           corepack enable
-          yarn install --immutable
+          corepack prepare yarn@3.6.0 --activate
+
+      - name: Install dependencies
+        run: yarn install --immutable
 
       - name: Build package
         run: yarn build
