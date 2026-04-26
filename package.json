@@ -12,7 +12,7 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "test": "yarn typecheck && yarn lint",
+    "test": "yarn typecheck && yarn lint && npx jest --coverage",
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
@@ -82,6 +82,7 @@
     "@typescript-eslint/parser": "^8.58.1",
     "conventional-changelog-conventionalcommits": "^9.3.1",
     "eslint": "^9.39.4",
+    "jest": "^30.3.0",
     "semantic-release": "^25.0.3",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",

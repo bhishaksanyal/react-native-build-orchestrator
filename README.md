@@ -1,5 +1,7 @@
 # react-native-build-orchestrator
 
+![Build](https://github.com/bhishaksanyal/react-native-build-orchestrator/actions/workflows/release.yml/badge.svg) [![codecov](https://codecov.io/github/bhishaksanyal/react-native-build-orchestrator/graph/badge.svg?token=MTiM0VJUx7)](https://codecov.io/github/bhishaksanyal/react-native-build-orchestrator) ![npm](https://img.shields.io/npm/v/react-native-build-orchestrator) ![Downloads](https://img.shields.io/npm/dw/react-native-build-orchestrator) ![License](https://img.shields.io/github/license/bhishaksanyal/react-native-build-orchestrator) ![React Native](https://img.shields.io/badge/React%20Native-supported-blue) ![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey) ![TypeScript](https://img.shields.io/badge/code-TypeScript-blue) ![Lint](https://img.shields.io/badge/lint-eslint-blue)
+
 CLI workflow manager for React Native projects that standardizes environment handling, flavor-aware Android/iOS builds, version updates, and Fastlane uploads.
 
 ![React Native Build Orchestrator - Streamline Your Builds](./assets/hero.png)
