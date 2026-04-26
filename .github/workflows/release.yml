@@ -4,16 +4,18 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  packages: write
-  pull-requests: write
-
 jobs:
   release:
     # Skip release if commit message contains [skip ci]
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
     runs-on: ubuntu-latest
+
+    # 🔐 Least-privilege permissions (Scorecard requirement)
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,6 +27,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: yarn
 
       - name: Install dependencies
         run: |
@@ -37,11 +40,22 @@ jobs:
       - name: Run tests
         run: yarn test
 
+      # 📊 Codecov (fail if upload fails)
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
-         token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
 
+      # 🔒 OSSF Scorecard
+      - name: Run OSSF Scorecard
+        uses: ossf/scorecard-action@v2.4.3
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          publish_results: true
+
+      # 📦 Semantic Release (needs elevated perms only here)
       - name: Create Release
         uses: cycjimmy/semantic-release-action@v4
         with:
