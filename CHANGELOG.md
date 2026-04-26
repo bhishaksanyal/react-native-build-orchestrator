@@ -1,3 +1,9 @@
+## [1.0.5](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.4...v1.0.5) (2026-04-26)
+
+### 🐛 Bug Fixes
+
+* trigger release ([053ef66](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/053ef669256da2d0b71e4209bffddae6d7ab667d))
+
 ## [1.0.4](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.3...v1.0.4) (2026-04-26)
 
 ### 🐛 Bug Fixes
