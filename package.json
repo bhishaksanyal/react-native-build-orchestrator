@@ -1,6 +1,6 @@
 {
   "name": "react-native-build-orchestrator",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "packageManager": "yarn@3.6.0",
   "repository": {
     "type": "git",
