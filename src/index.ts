@@ -15,7 +15,7 @@ import { runVersionCommand } from "./commands/version.js";
 
 program
   .name("rnbuild")
-  .description("Interactive React Native build and archive helper")
+  .description("CLI for React Native environment management, flavor-aware builds, and store uploads")
   .version(pkg.version);
 
 program

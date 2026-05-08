@@ -14,6 +14,7 @@ jobs:
     # 🔐 Least-privilege permissions (Scorecard requirement)
     permissions:
       contents: write
+      packages: write
       id-token: write
 
     steps:
