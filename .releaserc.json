@@ -105,8 +105,8 @@
       {
         "assets": [
           {
-            "path": "dist",
-            "label": "Distribution files"
+            "path": "dist/*.tgz",
+            "label": "NPM Tarball"
           }
         ],
         "releasedLabels": ["released"]
