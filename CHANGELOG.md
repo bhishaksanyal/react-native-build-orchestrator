@@ -1,3 +1,14 @@
+## [1.0.6](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.5...v1.0.6) (2026-05-08)
+
+### 🐛 Bug Fixes
+
+* update CLI description and release configuration ([5803ac9](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/5803ac95f0f83322a5c5699af36cb7a4f15edbf2))
+
+### 📚 Documentation
+
+* updated badges ([29696ae](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/29696ae5320d3c867ed2d79b991f022b9dd24aa3))
+* updates badges ([fc8ccdb](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/fc8ccdb08b620566c8776f80afae94f519181421))
+
 ## [1.0.5](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.4...v1.0.5) (2026-04-26)
 
 ### 🐛 Bug Fixes
