@@ -2,7 +2,7 @@
 import { program } from "commander";
 import pc from "picocolors";
 
-import pkg from "../package.json" assert { type: "json" };
+import pkg from "../package.json" with { type: "json" };
 import { runInitCommand } from "./commands/init.js";
 import { runBuildCommand } from "./commands/build.js";
 import { runDoctorCommand } from "./commands/doctor.js";
