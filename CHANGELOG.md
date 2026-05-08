@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.6...v1.0.7) (2026-05-08)
+
+### 🐛 Bug Fixes
+
+* adjust release permissions and asset directory ([27f8541](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/27f8541a71e9b3834dd20614c9b264fa3aeccd80))
+* adjust release permissions and asset directory ([90cb08b](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/90cb08b8732e61e148e8f356e942b9fecbc6d3e9))
+
 ## [1.0.6](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.5...v1.0.6) (2026-05-08)
 
 ### 🐛 Bug Fixes
