@@ -62,6 +62,7 @@ jobs:
 
       # 📦 Semantic Release (needs elevated perms only here)
       - name: Create Release
+        id: semantic
         uses: cycjimmy/semantic-release-action@v4
         with:
           semantic_version: 24
@@ -74,4 +75,13 @@ jobs:
             @semantic-release/github@12
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # 📦 Dual-publish to GitHub Packages
+      - name: Publish to GitHub Packages
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          npm config set //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+          npm publish --registry https://npm.pkg.github.com
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
