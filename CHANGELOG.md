@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.7...v1.1.0) (2026-05-08)
+
+### ✨ Features
+
+* setup GitHub Packages and update CLI description ([bbbe693](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/bbbe693b8ea7ebdeb4d4226ee9502193d325ea9c))
+
 ## [1.0.7](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.6...v1.0.7) (2026-05-08)
 
 ### 🐛 Bug Fixes
