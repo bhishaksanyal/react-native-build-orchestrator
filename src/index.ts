@@ -2,6 +2,7 @@
 import { program } from "commander";
 import pc from "picocolors";
 
+import pkg from "../package.json" with { type: "json" };
 import { runInitCommand } from "./commands/init.js";
 import { runBuildCommand } from "./commands/build.js";
 import { runDoctorCommand } from "./commands/doctor.js";
@@ -15,7 +16,7 @@ import { runVersionCommand } from "./commands/version.js";
 program
   .name("rnbuild")
   .description("Interactive React Native build and archive helper")
-  .version("0.1.0");
+  .version(pkg.version);
 
 program
   .command("init")
