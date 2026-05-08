@@ -4382,8 +4382,8 @@ __metadata:
   linkType: hard
 
 "react-native-build-orchestrator@file:../..::locator=triage-app%40workspace%3A.":
-  version: 1.0.0
-  resolution: "react-native-build-orchestrator@file:../..#../..::hash=204bde&locator=triage-app%40workspace%3A."
+  version: 1.0.5
+  resolution: "react-native-build-orchestrator@file:../..#../..::hash=08bfac&locator=triage-app%40workspace%3A."
   dependencies:
     "@clack/prompts": ^0.7.0
     cli-table: ^0.3.11
@@ -4395,7 +4395,7 @@ __metadata:
     zod: ^3.25.76
   bin:
     rnbuild: dist/index.js
-  checksum: 7fdc24bea78e4963d75a79a9a9efe8c3929180ef2f686c0db5883f12436f89ff9906dcea43149d076b65fa06633c53b4bb001630052f2e68c840b6115e24849b
+  checksum: 8b9c1cc979ca610a48134f342452756d4133e686309a1aa093cad37ba3ecc035b777d8a4643ff932e70d342895adafea12974df13b3a1f7e9384328d27f0efa4
   languageName: node
   linkType: hard
 
