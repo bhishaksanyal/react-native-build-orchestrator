@@ -361,7 +361,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
     uploadArtifactType = selectedAndroidArtifact === "bundle" ? "aab" : "apk";
   } else {
     selectedIosArtifact = "ipa";
-    uploadArtifactType = options.iosArtifact === "ipa" || !options.iosArtifact ? "ipa" : "ipa";
+    uploadArtifactType = "ipa";
   }
 
   const defaultLane = config.fastlane?.[platform]?.lane ?? "upload_store";

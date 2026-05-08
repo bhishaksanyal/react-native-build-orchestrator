@@ -61,7 +61,7 @@ function applyAndroidArtifactToCommand(
   buildType: BuildType,
   artifact: AndroidArtifact
 ): string {
-  if (command.includes("{{ANDROID_ARTIFACT")) {
+  if (command.includes("{{ANDROID_ARTIFACT") || command.includes("{{ANDROID_TASK")) {
     return command;
   }
 
@@ -84,7 +84,12 @@ function applyAndroidFlavorToCommand(
   flavor: string,
   artifact: AndroidArtifact
 ): string {
-  if (command.includes("{{FLAVOR")) {
+  if (
+    command.includes("{{FLAVOR") ||
+    command.includes("{{FLAVOR_NAME") ||
+    command.includes("{{FLAVOR_VALUE") ||
+    command.includes("{{FLAVOR_TASK")
+  ) {
     return command;
   }
 
@@ -122,7 +127,12 @@ function applyAndroidFlavorToCommand(
 }
 
 function applyIosFlavorToCommand(command: string, schemeName: string): string {
-  if (command.includes("{{FLAVOR")) {
+  if (
+    command.includes("{{FLAVOR") ||
+    command.includes("{{FLAVOR_NAME") ||
+    command.includes("{{FLAVOR_VALUE") ||
+    command.includes("{{FLAVOR_TASK")
+  ) {
     return command;
   }
 
@@ -502,7 +512,13 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
     FLAVOR: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_NAME: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_VALUE: resolvedFlavor,
-    FLAVOR_TASK: resolvedFlavor ? toFlavorTaskName(resolvedFlavor) : ""
+    FLAVOR_TASK: resolvedFlavor ? toFlavorTaskName(resolvedFlavor) : "",
+    ANDROID_TASK:
+      selectedPlatform === "android"
+        ? (selectedAndroidArtifact === "bundle" ? "bundle" : "assemble") +
+          (resolvedFlavor ? toFlavorTaskName(resolvedFlavor) : "") +
+          (selectedType === "development" ? "Debug" : "Release")
+        : ""
   };
 
   const interpolatedCommand = interpolate(target.command, mergedVars);
