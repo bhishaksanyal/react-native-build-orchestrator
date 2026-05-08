@@ -46,6 +46,9 @@
   ],
   "author": "Bhishak Sanyal <sanyalbishak93@gmail.com>",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20.18.0"
   },
