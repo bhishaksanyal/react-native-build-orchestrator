@@ -1,3 +1,14 @@
+## [1.3.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.2.1...v1.3.0) (2026-05-09)
+
+### ✨ Features
+
+* add GitHub Actions examples and unit tests ([0c5e9f3](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/0c5e9f3eedc260c67a0c60f17542e9ce3e9b9a9e))
+* add GitHub Actions release examples and unit tests ([f86ba90](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/f86ba90d770da9d6388507d7938d59e77d87cac3))
+* add GitHub Actions release examples and unit tests ([c266007](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/c266007b548ba63eeb119c21ab394a4c18f0ecc4))
+* add GitHub Actions release examples and unit tests ([bd34e56](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/bd34e56d9b5cb59884fb3079eb2a4762ecdcc258))
+* add GitHub Actions release examples and unit tests ([32b0f5d](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/32b0f5d0c3b4abd7169d45a29a3ef74e49df0b0b))
+* add GitHub Actions release examples and unit tests ([abb36b7](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/abb36b77adaab857c1d82cc30011cc10b30bff73))
+
 ## [1.2.1](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.2.0...v1.2.1) (2026-05-09)
 
 ### 🐛 Bug Fixes
