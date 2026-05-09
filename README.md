@@ -4,7 +4,7 @@
 
 CLI workflow manager for React Native projects that standardizes environment handling, flavor-aware Android/iOS builds, version updates, and Fastlane uploads.
 
-![React Native Build Orchestrator - Streamline Your Builds](./assets/hero.png)
+![React Native Build Orchestrator - Streamline Your Builds](https://raw.githubusercontent.com/bhishaksanyal/react-native-build-orchestrator/main/assets/hero.png)
 
 ## Why use it
 
