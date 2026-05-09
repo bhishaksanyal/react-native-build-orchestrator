@@ -1,0 +1,50 @@
+name: iOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to release'
+        required: true
+        default: 'production'
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Install Pods
+        run: cd ios && pod install
+
+      - name: Release to TestFlight
+        run: |
+          yarn rnbuild release \
+            --env ${{ github.event.inputs.environment }} \
+            --platform ios \
+            --type store \
+            --lane upload_store \
+            --track testflight \
+            --ci
+        env:
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
