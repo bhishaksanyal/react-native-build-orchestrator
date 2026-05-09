@@ -1,5 +1,5 @@
 {
-  "name": "@bhishaksanyal/react-native-build-orchestrator",
+  "name": "react-native-build-orchestrator",
   "version": "1.2.1",
   "packageManager": "yarn@3.6.0",
   "repository": {
