@@ -12,11 +12,12 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "test": "yarn typecheck && yarn lint && npx jest --coverage --passWithNoTests",
+    "test": "yarn typecheck && yarn lint && yarn test:unit --coverage --passWithNoTests",
+    "test:unit": "jest",
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint . --ext .ts --ignore-pattern coverage",
     "prepare": "yarn build",
     "release": "semantic-release --no-ci"
   },
@@ -79,6 +80,7 @@
     "@semantic-release/release-notes-generator": "^14.1.0",
     "@types/cli-table": "^0.3.4",
     "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.19.17",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
@@ -87,6 +89,7 @@
     "eslint": "^9.39.4",
     "jest": "^30.3.0",
     "semantic-release": "^25.0.3",
+    "ts-jest": "^29.4.9",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
