@@ -152,10 +152,10 @@ Builds and uploads to store in one unified pipeline. **Always builds first, then
 yarn rnbuild release
 
 # Non-interactive: Android AAB to internal track
-yarn rnbuild release --env production --platform android --type store --android-artifact bundle --lane upload_store --track internal
+yarn rnbuild release --env production --platform android --type store --android-artifact bundle --lane upload_store --track internal --ci
 
 # Non-interactive: iOS to TestFlight
-yarn rnbuild release --env production --platform ios --type store --lane upload_store --track testflight
+yarn rnbuild release --env production --platform ios --type store --lane upload_store --track testflight --ci
 
 # With custom artifact path
 yarn rnbuild release --env production --platform android --type store --artifact-path android/app/build/outputs/bundle/release/app-release.aab
@@ -270,7 +270,8 @@ yarn rnbuild release \
   --type store \
   --android-artifact bundle \
   --lane upload_store \
-  --track internal
+  --track internal \
+  --ci
 ```
 
 For reproducible Fastlane runs in CI, use Bundler and prefer `bundle exec fastlane`.
@@ -304,7 +305,7 @@ The following items are intentionally kept as future work so maintainers and ope
 
 - CI mode with structured JSON output (`--ci`, machine-readable summaries)
 - Non-interactive validation mode for pipelines (`rnbuild doctor --ci`)
-- GitHub Actions examples for Android AAB and iOS IPA releases
+- ~~GitHub Actions examples for Android AAB and iOS IPA releases~~
 - Better exit-code mapping for build vs upload failures
 
 ### Phase 2: Release pipeline hardening
