@@ -30,6 +30,7 @@ interface ReleaseOptions {
   fast?: boolean;
   rawLogs?: boolean;
   dryRun?: boolean;
+  ci?: boolean;
 }
 
 function toFastlaneOption(key: string, value: string): string {
@@ -556,13 +557,15 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
   console.log(pc.gray(`Command: ${uploadCommand}`));
   console.log("");
 
-  const shouldRun = await confirm({
-    message: "Run Fastlane upload now?",
-    initialValue: true
-  });
-  if (isCancel(shouldRun) || !shouldRun) {
-    outro(pc.yellow("Upload cancelled."));
-    return;
+  if (!options.ci) {
+    const shouldRun = await confirm({
+      message: "Run Fastlane upload now?",
+      initialValue: true
+    });
+    if (isCancel(shouldRun) || !shouldRun) {
+      outro(pc.yellow("Upload cancelled."));
+      return;
+    }
   }
 
   const runtimeArtifacts = await writeRuntimeEnvExports(projectDir, String(selectedEnv), uploadRuntimeVars);

@@ -12,7 +12,8 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "test": "yarn typecheck && yarn lint && npx jest --coverage --passWithNoTests",
+    "test": "yarn typecheck && yarn lint && yarn test:unit --coverage --passWithNoTests",
+    "test:unit": "jest",
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
