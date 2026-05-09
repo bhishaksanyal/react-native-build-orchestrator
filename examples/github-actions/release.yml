@@ -21,9 +21,13 @@ on:
         required: false
 
 jobs:
-  android-release:
-    if: github.event.inputs.platform == 'android' || github.event.inputs.platform == 'both'
-    runs-on: ubuntu-latest
+  release:
+    name: ${{ matrix.platform }} release
+    if: github.event.inputs.platform == matrix.platform || github.event.inputs.platform == 'both'
+    runs-on: ${{ matrix.platform == 'android' && 'ubuntu-latest' || 'macos-latest' }}
+    strategy:
+      matrix:
+        platform: [android, ios]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,72 +38,54 @@ jobs:
           node-version: '20'
           cache: 'yarn'
 
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      # Android Specific Setup
       - name: Set up Java
+        if: matrix.platform == 'android'
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install dependencies
-        run: yarn install --immutable
-
       - name: Decode Keystore
+        if: matrix.platform == 'android'
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
 
-      - name: Release to Play Store
-        run: |
-          yarn rnbuild release \
-            --env ${{ github.event.inputs.environment }} \
-            --platform android \
-            --type store \
-            --android-artifact bundle \
-            --lane upload_store \
-            --track ${{ github.event.inputs.track || 'internal' }} \
-            --ci
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          SUPPLY_JSON_KEY_DATA: ${{ secrets.SUPPLY_JSON_KEY_DATA }}
-
-  ios-release:
-    if: github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'both'
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-
+      # iOS Specific Setup
       - name: Set up Ruby
+        if: matrix.platform == 'ios'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Install dependencies
-        run: yarn install --immutable
-
       - name: Install Pods
+        if: matrix.platform == 'ios'
         run: cd ios && pod install
 
-      - name: Release to TestFlight
+      # Unified Release Command
+      - name: Build and Release
         run: |
           yarn rnbuild release \
             --env ${{ github.event.inputs.environment }} \
-            --platform ios \
+            --platform ${{ matrix.platform }} \
             --type store \
+            ${{ matrix.platform == 'android' && '--android-artifact bundle' || '' }} \
             --lane upload_store \
-            --track ${{ github.event.inputs.track || 'testflight' }} \
+            --track ${{ github.event.inputs.track || (matrix.platform == 'android' && 'internal' || 'testflight') }} \
             --ci
         env:
+          # Android Secrets
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.SUPPLY_JSON_KEY_DATA }}
+          # iOS Secrets
           APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY }}
