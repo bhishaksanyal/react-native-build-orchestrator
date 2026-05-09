@@ -1,3 +1,15 @@
+## [1.2.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.1.0...v1.2.0) (2026-05-09)
+
+### ✨ Features
+
+* enable dual-publishing to npmjs.org and GitHub Packages ([b7b59b5](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/b7b59b59a09b3defa9d8dd4f66922662bcfe6346))
+
+## [1.1.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.7...v1.1.0) (2026-05-08)
+
+### ✨ Features
+
+* setup GitHub Packages and update CLI description ([bbbe693](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/bbbe693b8ea7ebdeb4d4226ee9502193d325ea9c))
+
 ## [1.0.7](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.0.6...v1.0.7) (2026-05-08)
 
 ### 🐛 Bug Fixes
