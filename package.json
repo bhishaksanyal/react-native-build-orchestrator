@@ -47,8 +47,7 @@
   "author": "Bhishak Sanyal <sanyalbishak93@gmail.com>",
   "license": "MIT",
   "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
+    "access": "public"
   },
   "engines": {
     "node": ">=20.18.0"
