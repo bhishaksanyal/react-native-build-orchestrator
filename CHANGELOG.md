@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.2.0...v1.2.1) (2026-05-09)
+
+### 🐛 Bug Fixes
+
+* lock mismatch ([64b7b65](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/64b7b65b0c77ed1845f9a8a5d59b97b9356181f1))
+
 ## [1.2.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.1.0...v1.2.0) (2026-05-09)
 
 ### ✨ Features
