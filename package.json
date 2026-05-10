@@ -13,7 +13,7 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "yarn typecheck && yarn lint && yarn test:unit --coverage --passWithNoTests",
-    "test:unit": "jest",
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest",
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
