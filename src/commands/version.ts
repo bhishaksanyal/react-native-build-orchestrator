@@ -16,7 +16,10 @@ interface VersionOptions {
   /** iOS CURRENT_PROJECT_VERSION */
   iosBuildNumber?: string;
   cwd?: string;
+  ci?: boolean;
 }
+
+import { isCancel } from "../utils/logger.js";
 
 function asPlatform(input: string): Platform {
   if (!PLATFORMS.includes(input as Platform)) {
@@ -405,32 +408,48 @@ export async function runVersionCommand(options: VersionOptions): Promise<Versio
 
     // ── Version — common across both platforms ────────────────────────────
     const version = options.version
-      ?? String(
-          await text({
-            message: "Version (applied to all platforms/targets)",
-            initialValue: currentAndroid.version ?? "",
-            placeholder: "1.5.0"
-          })
-        ).trim();
+      ?? (options.ci
+        ? undefined // In CI, if not provided, we don't change it unless specified
+        : String(
+            await text({
+              message: "Version (applied to all platforms/targets)",
+              initialValue: currentAndroid.version ?? "",
+              placeholder: "1.5.0"
+            })
+          ).trim());
+
+    if (!options.ci && isCancel(version)) return { status: "cancelled" };
 
     // ── Build numbers — separate per platform ─────────────────────────────
     const androidBuildNumber = options.androidBuildNumber
-      ?? String(
-          await text({
-            message: "Android build number (versionCode, integer)",
-            initialValue: currentAndroid.buildNumber ?? "",
-            placeholder: "150"
-          })
-        ).trim();
+      ?? (options.ci
+        ? undefined
+        : String(
+            await text({
+              message: "Android build number (versionCode, integer)",
+              initialValue: currentAndroid.buildNumber ?? "",
+              placeholder: "150"
+            })
+          ).trim());
+
+    if (!options.ci && isCancel(androidBuildNumber)) return { status: "cancelled" };
 
     const iosBuildNumber = options.iosBuildNumber
-      ?? String(
-          await text({
-            message: "iOS build number (CURRENT_PROJECT_VERSION, integer)",
-            initialValue: currentIos.buildNumber ?? "",
-            placeholder: "150"
-          })
-        ).trim();
+      ?? (options.ci
+        ? undefined
+        : String(
+            await text({
+              message: "iOS build number (CURRENT_PROJECT_VERSION, integer)",
+              initialValue: currentIos.buildNumber ?? "",
+              placeholder: "150"
+            })
+          ).trim());
+
+    if (!options.ci && isCancel(iosBuildNumber)) return { status: "cancelled" };
+
+    if (options.ci && !version && !androidBuildNumber && !iosBuildNumber) {
+      throw new Error("Prompt required but running in CI mode: At least one of --version, --android-build-number, or --ios-build-number must be provided.");
+    }
 
     if (!version && !androidBuildNumber && !iosBuildNumber) {
       throw new Error("At least one value must be provided.");

@@ -476,8 +476,8 @@ export async function runBuildCommand(options: BuildOptions): Promise<BuildSumma
   const envFileVars = envConfig.envFile ? await readDotEnv(envFilePath) : {};
   const runtimeVars = createRuntimeVars({
     envName: selectedEnv as string,
-    buildType: selectedType as any as BuildType,
-    platform: selectedPlatform as any as Platform,
+    buildType: selectedType as unknown as BuildType,
+    platform: selectedPlatform as unknown as Platform,
     flavor: selectedFlavor as string | undefined,
     envFileVars,
     envConfigVars: envConfig.vars ?? {}
@@ -555,10 +555,10 @@ export async function runBuildCommand(options: BuildOptions): Promise<BuildSumma
       status: "success",
       dryRun: true,
       projectDir,
-      environment: selectedEnv as any,
-      buildType: selectedType as any,
-      platform: selectedPlatform as any,
-      flavor: selectedFlavor as any,
+      environment: selectedEnv as string,
+      buildType: selectedType as BuildType,
+      platform: selectedPlatform as Platform,
+      flavor: selectedFlavor as string,
       command: finalCommand
     };
   }
@@ -627,10 +627,10 @@ export async function runBuildCommand(options: BuildOptions): Promise<BuildSumma
   return {
     status: "success",
     projectDir,
-    environment: selectedEnv as any,
-    buildType: selectedType as any,
-    platform: selectedPlatform as any,
-    flavor: selectedFlavor as any,
+    environment: selectedEnv as string,
+    buildType: selectedType as BuildType,
+    platform: selectedPlatform as Platform,
+    flavor: selectedFlavor as string,
     command: finalCommand,
     logPath,
     expectedArtifact: outputHint

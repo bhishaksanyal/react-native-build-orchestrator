@@ -14,7 +14,7 @@ import { runAppCommand } from "./commands/run.js";
 import { runVersionCommand } from "./commands/version.js";
 import { setCiMode, getCiMode, printJson } from "./utils/logger.js";
 
-import { type CommandResult } from "./types.js";
+import { type CommandResult, type Platform } from "./types.js";
 
 async function withErrorHandler(name: string, isCi: boolean | undefined, fn: () => Promise<CommandResult | void>) {
   try {
@@ -22,7 +22,7 @@ async function withErrorHandler(name: string, isCi: boolean | undefined, fn: () 
     const result = await fn();
     if (getCiMode() && result !== undefined) {
       printJson(result);
-      if (result.status === "error") {
+      if (result && result.status === "error") {
         process.exitCode = 1;
       }
     }
@@ -47,12 +47,14 @@ program
   .description("Create a .rnbuildrc.yml configuration file")
   .option("--force", "Overwrite existing config")
   .option("--project-name <name>", "Set project name/scheme default")
+  .option("--cwd <path>", "Project path (defaults to current directory)")
   .option("--ci", "Run in CI mode with structured JSON output and no prompts")
-  .action(async (options: { force?: boolean; projectName?: string; ci?: boolean }) => {
+  .action(async (options: { force?: boolean; projectName?: string; ci?: boolean; cwd?: string }) => {
     await withErrorHandler("init", options.ci, () =>
       runInitCommand({
         force: Boolean(options.force),
-        projectName: options.projectName
+        projectName: options.projectName,
+        cwd: options.cwd
       })
     );
   });
@@ -209,8 +211,9 @@ program
 program
   .command("env [action] [env-name]")
   .description("Manage environments: list | view | add | edit | remove | set-default | detect")
+  .option("--cwd <path>", "Project path (defaults to current directory)")
   .option("--ci", "Run in CI mode with structured JSON output and no prompts")
-  .action(async (action?: string, envName?: string, options?: { ci?: boolean }) => {
+  .action(async (action?: string, envName?: string, options?: { ci?: boolean; cwd?: string }) => {
     await withErrorHandler("env", options?.ci, async () => {
       const validActions = ["list", "view", "add", "edit", "remove", "set-default", "detect"];
       if (action && !validActions.includes(action)) {
@@ -226,16 +229,17 @@ program
           | "set-default"
           | "detect"
           | undefined,
-        envName
+        envName,
+        options?.cwd
       );
     });
   });
-
 program
   .command("flavor [action] [platform] [name]")
   .description("Manage platform flavors: list | add | edit | remove | set-default | detect")
+  .option("--cwd <path>", "Project path (defaults to current directory)")
   .option("--ci", "Run in CI mode with structured JSON output and no prompts")
-  .action(async (action?: string, platform?: string, name?: string, options?: { ci?: boolean }) => {
+  .action(async (action?: string, platform?: string, name?: string, options?: { ci?: boolean; cwd?: string }) => {
     await withErrorHandler("flavor", options?.ci, async () => {
       const validActions = ["list", "add", "edit", "remove", "set-default", "detect"];
       if (action && !validActions.includes(action)) {
@@ -246,8 +250,9 @@ program
       }
       return runFlavorCommand(
         action as "list" | "add" | "edit" | "remove" | "set-default" | "detect" | undefined,
-        platform,
-        name
+        platform as Platform,
+        name,
+        options?.cwd
       );
     });
   });

@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import pc from "picocolors";
-import { promptConfirm as confirm, promptSelect as select, promptText as text, intro, outro, spinner, log } from "../utils/logger.js";
+import { promptConfirm as confirm, promptSelect as select, promptText as text, intro, outro, spinner, log, isCancel } from "../utils/logger.js";
 import { execa } from "execa";
 
 import { runBuildCommand } from "./build.js";
@@ -350,7 +350,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   let selectedTrack = options.track;
   if (!selectedTrack) {
     try {
-      selectedTrack = await promptTrack(platform as any, defaultTrack);
+      selectedTrack = await promptTrack(platform as Platform, defaultTrack);
     } catch (error) {
       if (error instanceof Error && error.message === "cancelled-by-user") {
         outro(pc.yellow("Release cancelled."));
@@ -375,8 +375,8 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   const envFileVars = envConfig.envFile ? await readDotEnv(envFilePath) : {};
   const runtimeVars = createRuntimeVars({
     envName: String(selectedEnv),
-    buildType: selectedType as any as BuildType,
-    platform: platform as any,
+    buildType: selectedType as unknown as BuildType,
+    platform: platform as Platform,
     flavor: selectedFlavor as string | undefined,
     envFileVars,
     envConfigVars: envConfig.vars ?? {}
@@ -387,7 +387,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
     PROJECT_NAME: config.projectName,
     ENV_NAME: String(selectedEnv),
     BUILD_TYPE: selectedType as BuildType,
-    PLATFORM: platform as any,
+    PLATFORM: platform as Platform,
     FLAVOR: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_NAME: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_VALUE: resolvedFlavor,
@@ -434,7 +434,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   await runBuildCommand({
     env: String(selectedEnv),
     type: selectedType as BuildType,
-    platform: platform as any,
+    platform: platform as Platform,
     flavor: selectedFlavor as string | undefined,
     androidArtifact: selectedAndroidArtifact,
     cwd: projectDir,
@@ -449,10 +449,10 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
       status: "success",
       dryRun: true,
       projectDir,
-      environment: selectedEnv as any,
-      platform: platform as any,
-      flavor: selectedFlavor as any,
-      buildType: selectedType as any,
+      environment: selectedEnv as string,
+      platform: platform as Platform,
+      flavor: selectedFlavor as string,
+      buildType: selectedType as BuildType,
       upload: {
         lane: selectedLane,
         track: selectedTrack
@@ -491,8 +491,8 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
 
   const uploadRuntimeVars = createRuntimeVars({
     envName: String(selectedEnv),
-    buildType: selectedType as any as BuildType,
-    platform: platform as any,
+    buildType: selectedType as unknown as BuildType,
+    platform: platform as Platform,
     flavor: selectedFlavor as string | undefined,
     envFileVars: uploadEnvFileVars,
     envConfigVars: uploadEnvConfig.vars ?? {}
@@ -503,7 +503,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
     PROJECT_NAME: config.projectName,
     ENV_NAME: String(selectedEnv),
     BUILD_TYPE: selectedType as BuildType,
-    PLATFORM: platform as any,
+    PLATFORM: platform as Platform,
     FLAVOR: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_NAME: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_VALUE: resolvedFlavor
@@ -536,6 +536,9 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
       message: "Run Fastlane upload now?",
       initialValue: true
     });
+    if (isCancel(shouldRun) || !shouldRun) {
+      return { status: "cancelled", message: "Upload skipped by user" };
+    }
   }
 
   const runtimeArtifacts = await writeRuntimeEnvExports(projectDir, String(selectedEnv), uploadRuntimeVars);
@@ -577,10 +580,10 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   return {
     status: "success",
     projectDir,
-    environment: selectedEnv as any,
-    platform: platform as any,
-    flavor: selectedFlavor as any,
-    buildType: selectedType as any,
+    environment: selectedEnv as string,
+    platform: platform as Platform,
+    flavor: selectedFlavor as string,
+    buildType: selectedType as BuildType,
     upload: {
       lane: selectedLane,
       track: selectedTrack,

@@ -67,7 +67,7 @@ export function checkCancel(value: unknown): boolean {
 
 export async function promptSelect<T>(options: Parameters<typeof select>[0]): Promise<T> {
   if (isCiMode) {
-    throw new Error(`Prompt required but running in CI mode: ${(options as any).message}`);
+    throw new Error(`Prompt required but running in CI mode: ${(options as { message: string }).message}`);
   }
   const result = await select(options);
   if (isCancel(result)) {
@@ -79,7 +79,7 @@ export async function promptSelect<T>(options: Parameters<typeof select>[0]): Pr
 
 export async function promptText(options: Parameters<typeof text>[0]): Promise<string> {
   if (isCiMode) {
-    throw new Error(`Prompt required but running in CI mode: ${(options as any).message}`);
+    throw new Error(`Prompt required but running in CI mode: ${(options as { message: string }).message}`);
   }
   const result = await text(options);
   if (isCancel(result)) {
@@ -91,7 +91,7 @@ export async function promptText(options: Parameters<typeof text>[0]): Promise<s
 
 export async function promptConfirm(options: Parameters<typeof confirm>[0]): Promise<boolean> {
   if (isCiMode) {
-    return (options as any).initialValue ?? true;
+    return (options as { initialValue?: boolean }).initialValue ?? true;
   }
   const result = await confirm(options);
   if (isCancel(result)) {

@@ -40,3 +40,29 @@ function assert_stderr_contains() {
     exit 1
   fi
 }
+function assert_json_message_contains() {
+  local pattern=$1
+  local file=$2
+  if grep -q "\"message\": \".*$pattern.*\"" "$file"; then
+    echo -e "  ${GREEN}✅ JSON message contains: $pattern${NC}"
+  else
+    echo -e "  ${RED}❌ Pattern '$pattern' not found in JSON message${NC}"
+    echo "Output was:"
+    cat "$file"
+    exit 1
+  fi
+}
+WORKSPACE_DIR="ci-test-workspace"
+
+function setup_workspace() {
+  mkdir -p "$WORKSPACE_DIR"
+}
+
+function cleanup_workspace() {
+  rm -rf "$WORKSPACE_DIR"
+  rm -f stdout.txt stderr.txt
+}
+
+function run_cmd() {
+  yarn dev "$@" --cwd "$WORKSPACE_DIR"
+}

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, isCancel } from "../utils/logger.js";
 import pc from "picocolors";
 
@@ -61,9 +62,10 @@ async function inputConfirm(message: string, initialValue = false): Promise<bool
 export async function runFlavorCommand(
   action?: FlavorAction,
   platformArg?: string,
-  flavorArg?: string
+  flavorArg?: string,
+  cwdOverride?: string
 ): Promise<FlavorSummary> {
-  const cwd = process.cwd();
+  const cwd = cwdOverride ? path.resolve(cwdOverride) : process.cwd();
   const config = await loadConfig(cwd);
 
   try {

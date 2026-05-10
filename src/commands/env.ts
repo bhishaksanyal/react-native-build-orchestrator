@@ -82,8 +82,8 @@ async function loadConfigForEnvCommand(cwd: string): Promise<LoadedConfig> {
   }
 }
 
-export async function runEnvCommand(action?: EnvAction, envName?: string): Promise<EnvSummary> {
-  const cwd = process.cwd();
+export async function runEnvCommand(action?: EnvAction, envName?: string, cwdOverride?: string): Promise<EnvSummary> {
+  const cwd = cwdOverride ? path.resolve(cwdOverride) : process.cwd();
   const config = await loadConfigForEnvCommand(cwd);
 
   try {

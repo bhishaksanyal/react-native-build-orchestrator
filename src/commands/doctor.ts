@@ -27,15 +27,33 @@ export async function runDoctorCommand(cwd?: string): Promise<DoctorSummary> {
 
   log(table.toString());
 
-  if (!hasConfig) {
-    outro(pc.yellow("Run 'rnbuild init' in your React Native project to generate config."));
+  const overallSuccess = hasConfig && hasPackageJson && (hasAndroid || hasIos);
+
+  if (!overallSuccess) {
+    const missing = [];
+    if (!hasConfig) missing.push(".rnbuildrc.yml");
+    if (!hasPackageJson) missing.push("package.json");
+    if (!hasAndroid && !hasIos) missing.push("native folders (android/ios)");
+
+    const message = `Doctor checks failed: missing ${missing.join(", ")}`;
+    outro(pc.red(message));
+    if (!hasConfig) {
+      log(pc.yellow("Run 'rnbuild init' in your React Native project to generate config."));
+    }
+
     return {
       status: "error",
-      message: "Missing .rnbuildrc.yml"
+      message,
+      checks: {
+        packageJson: hasPackageJson,
+        android: hasAndroid,
+        ios: hasIos,
+        config: hasConfig
+      }
     };
   }
 
-  outro(pc.green("Doctor checks completed."));
+  outro(pc.green("Doctor checks completed. Project is valid."));
 
   return {
     status: "success",

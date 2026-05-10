@@ -106,8 +106,8 @@ async function detectOrCreateEnvironments(projectDir: string): Promise<RNBuildCo
   };
 }
 
-export async function runInitCommand(options: { force: boolean; projectName?: string }): Promise<InitSummary> {
-  const cwd = process.cwd();
+export async function runInitCommand(options: { force: boolean; projectName?: string; cwd?: string }): Promise<InitSummary> {
+  const cwd = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const configPath = path.join(cwd, CONFIG_FILE);
   const exists = await fs.pathExists(configPath);
 

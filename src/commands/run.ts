@@ -1,6 +1,6 @@
 import path from "node:path";
 import pc from "picocolors";
-import { promptConfirm as confirm, promptSelect as select, intro, outro, log } from "../utils/logger.js";
+import { promptConfirm as confirm, promptSelect as select, intro, outro, log, isCancel } from "../utils/logger.js";
 import { execa } from "execa";
 
 import { loadConfig } from "../utils/config.js";
@@ -15,6 +15,7 @@ interface RunOptions {
   cwd?: string;
   rawLogs?: boolean;
   noPackager?: boolean;
+  ci?: boolean;
 }
 
 class RunCommandError extends Error {
@@ -346,7 +347,7 @@ export async function runAppCommand(options: RunOptions): Promise<BuildSummary> 
   const runtimeVars = createRuntimeVars({
     envName: selectedEnv as string,
     buildType: "development",
-    platform: selectedPlatform as any as Platform,
+    platform: selectedPlatform as unknown as Platform,
     flavor: selectedFlavor as string | undefined,
     envFileVars,
     envConfigVars: envConfig.vars ?? {}
@@ -366,7 +367,7 @@ export async function runAppCommand(options: RunOptions): Promise<BuildSummary> 
 
   const runCommand = interpolate(
     buildRunCommand({
-      platform: selectedPlatform as any as Platform,
+      platform: selectedPlatform as unknown as Platform,
       flavorValue: resolvedFlavor || undefined,
       noPackager: options.noPackager
     }),
@@ -383,10 +384,16 @@ export async function runAppCommand(options: RunOptions): Promise<BuildSummary> 
   log(pc.gray(`Command: ${runCommand}`));
   log("");
 
-  const shouldRun = await confirm({
-    message: "Run app in debug mode now?",
-    initialValue: true
-  });
+  if (!options.ci) {
+    const shouldRun = await confirm({
+      message: "Run app in debug mode now?",
+      initialValue: true
+    });
+
+    if (isCancel(shouldRun) || !shouldRun) {
+      return { status: "cancelled", message: "Run skipped by user" };
+    }
+  }
 
   const runtimeArtifacts = await writeRuntimeEnvExports(projectDir, selectedEnv as string, runtimeVars);
 
@@ -397,7 +404,7 @@ export async function runAppCommand(options: RunOptions): Promise<BuildSummary> 
       command: runCommand,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
-      platform: selectedPlatform as any as Platform,
+      platform: selectedPlatform as unknown as Platform,
       env: {
         ...process.env,
         ...mergedVars,
@@ -435,9 +442,9 @@ export async function runAppCommand(options: RunOptions): Promise<BuildSummary> 
   return {
     status: "success",
     projectDir,
-    environment: selectedEnv as any,
-    platform: selectedPlatform as any,
-    flavor: selectedFlavor as any,
+    environment: selectedEnv as string,
+    platform: selectedPlatform as Platform,
+    flavor: selectedFlavor as string,
     command: runCommand
   };
 }
