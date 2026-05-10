@@ -1,5 +1,5 @@
 import path from "node:path";
-import { intro, outro } from "@clack/prompts";
+import { intro, outro, log } from "../utils/logger.js";
 import pc from "picocolors";
 import fs from "fs-extra";
 
@@ -105,7 +105,7 @@ async function detectOrCreateEnvironments(projectDir: string): Promise<RNBuildCo
   };
 }
 
-export async function runInitCommand(options: { force: boolean; projectName?: string }): Promise<void> {
+export async function runInitCommand(options: { force: boolean; projectName?: string }): Promise<any> {
   const cwd = process.cwd();
   const configPath = path.join(cwd, CONFIG_FILE);
   const exists = await fs.pathExists(configPath);
@@ -134,17 +134,25 @@ export async function runInitCommand(options: { force: boolean; projectName?: st
     };
   }
 
-  console.log(pc.gray(`Detected project name: ${projectName}`));
-  console.log(pc.gray(`Detected environments: ${Object.keys(config.environments).join(", ")}`));
+  log(pc.gray(`Detected project name: ${projectName}`));
+  log(pc.gray(`Detected environments: ${Object.keys(config.environments).join(", ")}`));
   if (androidFlavors) {
-    console.log(pc.gray(`Detected Android flavors: ${androidFlavors.options.join(", ")}`));
+    log(pc.gray(`Detected Android flavors: ${androidFlavors.options.join(", ")}`));
   }
   if (iosFlavors) {
-    console.log(pc.gray(`Detected iOS schemes: ${iosFlavors.options.join(", ")}`));
+    log(pc.gray(`Detected iOS schemes: ${iosFlavors.options.join(", ")}`));
   }
 
   const writtenPath = await writeConfig(cwd, config);
   await syncRuntimeEnvFromConfig(cwd, config);
 
-  outro(pc.green(`Created ${writtenPath}. Edit ${CONFIG_FILE} any time.`));
+  outro(pc.green("Created " + writtenPath + ". Edit " + CONFIG_FILE + " any time."));
+
+  return {
+    status: "success",
+    projectName,
+    configPath: writtenPath,
+    environments: Object.keys(config.environments),
+    platforms: Object.keys(config.flavors || {})
+  };
 }

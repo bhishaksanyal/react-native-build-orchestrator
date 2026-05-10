@@ -12,28 +12,47 @@ import { runFlavorCommand } from "./commands/flavor.js";
 import { runReleaseCommand } from "./commands/release.js";
 import { runAppCommand } from "./commands/run.js";
 import { runVersionCommand } from "./commands/version.js";
+import { setCiMode, getCiMode, printJson } from "./utils/logger.js";
+
+async function withErrorHandler(name: string, isCi: boolean | undefined, fn: () => Promise<any>) {
+  try {
+    if (isCi) setCiMode(true);
+    const result = await fn();
+    if (getCiMode() && result !== undefined) {
+      printJson(result);
+      if (result.status === "error") {
+        process.exitCode = 1;
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (getCiMode()) {
+      printJson({ status: "error", command: name, message });
+    } else {
+      console.error(pc.red(`${name} failed: ${message}`));
+    }
+    process.exitCode = 1;
+  }
+}
 
 program
   .name("rnbuild")
   .description("Standardized React Native environment management, flavor-aware builds, and store uploads")
-  .version(pkg.version);
+  .version(pkg.version, "-V, --cli-version");
 
 program
   .command("init")
   .description("Create a .rnbuildrc.yml configuration file")
   .option("--force", "Overwrite existing config")
   .option("--project-name <name>", "Set project name/scheme default")
-  .action(async (options: { force?: boolean; projectName?: string }) => {
-    try {
-      await runInitCommand({
+  .option("--ci", "Run in CI mode with structured JSON output and no prompts")
+  .action(async (options: { force?: boolean; projectName?: string; ci?: boolean }) => {
+    await withErrorHandler("init", options.ci, () =>
+      runInitCommand({
         force: Boolean(options.force),
         projectName: options.projectName
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(pc.red(`init failed: ${message}`));
-      process.exitCode = 1;
-    }
+      })
+    );
   });
 
 program
@@ -48,6 +67,7 @@ program
   .option("--dry-run", "Show command without executing it")
   .option("--fast", "Apply platform fast-track flags for faster archives/builds")
   .option("--raw-logs", "Print raw build logs instead of styled output")
+  .option("--ci", "Run in CI mode with structured JSON output and no prompts")
   .action(
     async (options: {
       env?: string;
@@ -59,14 +79,9 @@ program
       dryRun?: boolean;
       fast?: boolean;
       rawLogs?: boolean;
+      ci?: boolean;
     }) => {
-      try {
-        await runBuildCommand(options);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(pc.red(`build failed: ${message}`));
-        process.exitCode = 1;
-      }
+      await withErrorHandler("build", options.ci, () => runBuildCommand(options));
     }
   );
 
@@ -104,13 +119,7 @@ program
       dryRun?: boolean;
       ci?: boolean;
     }) => {
-      try {
-        await runReleaseCommand(options);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(pc.red(`release failed: ${message}`));
-        process.exitCode = 1;
-      }
+      await withErrorHandler("release", options.ci, () => runReleaseCommand(options));
     }
   );
 
@@ -123,6 +132,7 @@ program
   .option("--cwd <path>", "Project path (defaults to current directory)")
   .option("--raw-logs", "Print raw run logs instead of styled output")
   .option("--no-packager", "Do not start Metro packager from React Native CLI")
+  .option("--ci", "Run in CI mode with structured JSON output and no prompts")
   .action(
     async (options: {
       env?: string;
@@ -131,14 +141,9 @@ program
       cwd?: string;
       rawLogs?: boolean;
       noPackager?: boolean;
+      ci?: boolean;
     }) => {
-      try {
-        await runAppCommand(options);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(pc.red(`run failed: ${message}`));
-        process.exitCode = 1;
-      }
+      await withErrorHandler("run", options.ci, () => runAppCommand(options));
     }
   );
 
@@ -147,36 +152,28 @@ program
   .description("Configure Fastlane files and upload defaults")
   .option("--cwd <path>", "Project path (defaults to current directory)")
   .option("--force", "Overwrite existing Fastlane files without confirmation")
-  .action(async (action?: string, options?: { cwd?: string; force?: boolean }) => {
-    try {
+  .option("--ci", "Run in CI mode with structured JSON output and no prompts")
+  .action(async (action?: string, options?: { cwd?: string; force?: boolean; ci?: boolean }) => {
+    await withErrorHandler("fastlane", options?.ci, async () => {
       const selectedAction = action ?? "setup";
       if (selectedAction !== "setup") {
         throw new Error("Invalid action. Supported: setup");
       }
 
-      await runFastlaneSetupCommand({
+      return runFastlaneSetupCommand({
         cwd: options?.cwd,
         force: Boolean(options?.force)
       });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(pc.red(`fastlane failed: ${message}`));
-      process.exitCode = 1;
-    }
+    });
   });
 
 program
   .command("doctor")
   .description("Check if current folder looks like a React Native CLI project")
   .option("--cwd <path>", "Project path (defaults to current directory)")
-  .action(async (options: { cwd?: string }) => {
-    try {
-      await runDoctorCommand(options.cwd);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(pc.red(`doctor failed: ${message}`));
-      process.exitCode = 1;
-    }
+  .option("--ci", "Run in CI mode with structured JSON output and no prompts")
+  .action(async (options: { cwd?: string; ci?: boolean }) => {
+    await withErrorHandler("doctor", options.ci, () => runDoctorCommand(options.cwd));
   });
 
 program
@@ -191,6 +188,7 @@ program
   .option("--android-build-number <number>", "Android versionCode (integer)")
   .option("--ios-build-number <number>", "iOS CURRENT_PROJECT_VERSION (integer)")
   .option("--cwd <path>", "Project path (defaults to current directory)")
+  .option("--ci", "Run in CI mode with structured JSON output and no prompts")
   .action(
     async (options: {
       platform?: string;
@@ -200,27 +198,23 @@ program
       androidBuildNumber?: string;
       iosBuildNumber?: string;
       cwd?: string;
+      ci?: boolean;
     }) => {
-      try {
-        await runVersionCommand(options);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(pc.red(`version failed: ${message}`));
-        process.exitCode = 1;
-      }
+      await withErrorHandler("version", options.ci, () => runVersionCommand(options));
     }
   );
 
 program
   .command("env [action] [env-name]")
   .description("Manage environments: list | view | add | edit | remove | set-default | detect")
-  .action(async (action?: string, envName?: string) => {
-    try {
+  .option("--ci", "Run in CI mode with structured JSON output and no prompts")
+  .action(async (action?: string, envName?: string, options?: { ci?: boolean }) => {
+    await withErrorHandler("env", options?.ci, async () => {
       const validActions = ["list", "view", "add", "edit", "remove", "set-default", "detect"];
       if (action && !validActions.includes(action)) {
         throw new Error(`Invalid action '${action}'. Use: ${validActions.join(", ")}`);
       }
-      await runEnvCommand(
+      return runEnvCommand(
         action as
           | "list"
           | "view"
@@ -232,18 +226,15 @@ program
           | undefined,
         envName
       );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(pc.red(`env failed: ${message}`));
-      process.exitCode = 1;
-    }
+    });
   });
 
 program
   .command("flavor [action] [platform] [name]")
   .description("Manage platform flavors: list | add | edit | remove | set-default | detect")
-  .action(async (action?: string, platform?: string, name?: string) => {
-    try {
+  .option("--ci", "Run in CI mode with structured JSON output and no prompts")
+  .action(async (action?: string, platform?: string, name?: string, options?: { ci?: boolean }) => {
+    await withErrorHandler("flavor", options?.ci, async () => {
       const validActions = ["list", "add", "edit", "remove", "set-default", "detect"];
       if (action && !validActions.includes(action)) {
         throw new Error(`Invalid action '${action}'. Use: ${validActions.join(", ")}`);
@@ -251,16 +242,12 @@ program
       if (platform && !["android", "ios"].includes(platform)) {
         throw new Error("Platform must be one of: android, ios");
       }
-      await runFlavorCommand(
+      return runFlavorCommand(
         action as "list" | "add" | "edit" | "remove" | "set-default" | "detect" | undefined,
         platform,
         name
       );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(pc.red(`flavor failed: ${message}`));
-      process.exitCode = 1;
-    }
+    });
   });
 
 void program.parseAsync(process.argv);

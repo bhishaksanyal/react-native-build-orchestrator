@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "fs-extra";
-import { confirm, intro, isCancel, outro, select, text } from "@clack/prompts";
+import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, checkCancel } from "../utils/logger.js";
 import pc from "picocolors";
 
 import { loadConfig, writeConfig } from "../utils/config.js";
@@ -9,13 +9,6 @@ import type { FastlaneConfig } from "../types.js";
 interface FastlaneSetupOptions {
   cwd?: string;
   force?: boolean;
-}
-
-function unwrap<T>(value: T | symbol): T {
-  if (isCancel(value)) {
-    throw new Error("cancelled-by-user");
-  }
-  return value;
 }
 
 function makeFastfile(config: FastlaneConfig): string {
@@ -105,10 +98,10 @@ function makeAppfile(config: FastlaneConfig): string {
 
 async function maybePromptWithDefault(message: string, defaultValue: string): Promise<string> {
   const value = await text({ message, defaultValue });
-  return String(unwrap(value)).trim();
+  return String(value).trim();
 }
 
-export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Promise<void> {
+export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Promise<any> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 
@@ -116,26 +109,22 @@ export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Pr
     intro(pc.bold(pc.cyan("RN Build Helper Fastlane Setup")));
 
     const useAndroid = Boolean(
-      unwrap(
-        await confirm({
-          message: "Configure Android Fastlane upload lane?",
-          initialValue: true
-        })
-      )
+      await confirm({
+        message: "Configure Android Fastlane upload lane?",
+        initialValue: true
+      })
     );
 
     const useIos = Boolean(
-      unwrap(
-        await confirm({
-          message: "Configure iOS Fastlane upload lane?",
-          initialValue: true
-        })
-      )
+      await confirm({
+        message: "Configure iOS Fastlane upload lane?",
+        initialValue: true
+      })
     );
 
     if (!useAndroid && !useIos) {
       outro(pc.yellow("No platform selected. Setup cancelled."));
-      return;
+      return { status: "cancelled", message: "No platform selected" };
     }
 
     const nextFastlaneConfig: FastlaneConfig = {
@@ -147,18 +136,16 @@ export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Pr
         "Android lane name",
         config.fastlane?.android?.lane ?? "upload_store"
       );
-      const track = unwrap(
-        await select({
-          message: "Default Android track",
-          options: [
-            { value: "internal", label: "internal" },
-            { value: "alpha", label: "alpha" },
-            { value: "beta", label: "beta" },
-            { value: "production", label: "production" }
-          ],
-          initialValue: config.fastlane?.android?.defaultTrack ?? "internal"
-        })
-      ) as string;
+      const track = await select({
+        message: "Default Android track",
+        options: [
+          { value: "internal", label: "internal" },
+          { value: "alpha", label: "alpha" },
+          { value: "beta", label: "beta" },
+          { value: "production", label: "production" }
+        ],
+        initialValue: config.fastlane?.android?.defaultTrack ?? "internal"
+      }) as string;
       const packageName = await maybePromptWithDefault(
         "Android package name (applicationId)",
         config.fastlane?.android?.packageName ?? ""
@@ -176,16 +163,14 @@ export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Pr
         "iOS lane name",
         config.fastlane?.ios?.lane ?? "upload_store"
       );
-      const track = unwrap(
-        await select({
-          message: "Default iOS destination",
-          options: [
-            { value: "testflight", label: "testflight" },
-            { value: "app_store", label: "app_store" }
-          ],
-          initialValue: config.fastlane?.ios?.defaultTrack ?? "testflight"
-        })
-      ) as string;
+      const track = await select({
+        message: "Default iOS destination",
+        options: [
+          { value: "testflight", label: "testflight" },
+          { value: "app_store", label: "app_store" }
+        ],
+        initialValue: config.fastlane?.ios?.defaultTrack ?? "testflight"
+      }) as string;
       const appIdentifier = await maybePromptWithDefault(
         "iOS app identifier (bundle id)",
         config.fastlane?.ios?.appIdentifier ?? ""
@@ -219,18 +204,16 @@ export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Pr
 
     if (!options.force && (fastfileExists || appfileExists)) {
       const shouldOverwrite = Boolean(
-        unwrap(
-          await confirm({
-            message: "Fastlane files already exist. Overwrite Fastfile/Appfile?",
-            initialValue: false
-          })
-        )
+        await confirm({
+          message: "Fastlane files already exist. Overwrite Fastfile/Appfile?",
+          initialValue: false
+        })
       );
       if (!shouldOverwrite) {
         config.fastlane = nextFastlaneConfig;
         await writeConfig(projectDir, config);
         outro(pc.green("Saved Fastlane settings in .rnbuildrc.yml without overwriting existing Fastlane files."));
-        return;
+        return { status: "success", filesOverwritten: false };
       }
     }
 
@@ -241,10 +224,10 @@ export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Pr
     await writeConfig(projectDir, config);
 
     const hasGemfile = await fs.pathExists(path.join(projectDir, "Gemfile"));
-    console.log(pc.gray(`Fastlane directory: ${fastlaneDir}`));
-    console.log(pc.gray(`Fastfile: ${fastfilePath}`));
-    console.log(pc.gray(`Appfile: ${appfilePath}`));
-    console.log(
+    log(pc.gray(`Fastlane directory: ${fastlaneDir}`));
+    log(pc.gray(`Fastfile: ${fastfilePath}`));
+    log(pc.gray(`Appfile: ${appfilePath}`));
+    log(
       pc.gray(
         hasGemfile
           ? "Use bundle exec fastlane for best consistency."
@@ -253,11 +236,12 @@ export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Pr
     );
 
     outro(pc.bold(pc.green("Fastlane setup complete.")));
+    return {
+      status: "success",
+      fastlaneDir,
+      filesOverwritten: true
+    };
   } catch (error) {
-    if (error instanceof Error && error.message === "cancelled-by-user") {
-      outro(pc.yellow("Fastlane setup cancelled."));
-      return;
-    }
     throw error;
   }
 }

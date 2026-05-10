@@ -1,4 +1,4 @@
-import { confirm, intro, isCancel, outro, select, text } from "@clack/prompts";
+import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, checkCancel } from "../utils/logger.js";
 import pc from "picocolors";
 
 import { loadConfig, writeConfig } from "../utils/config.js";
@@ -103,6 +103,10 @@ export async function runFlavorCommand(
         await handleDetect(cwd, config, platformArg);
         break;
     }
+    return {
+      status: "success",
+      action: selectedAction
+    };
   } catch (error) {
     if (error instanceof Error && error.message === CANCELLED) {
       outro(pc.yellow("Cancelled."));
@@ -118,7 +122,7 @@ async function handleList(config: LoadedConfig): Promise<void> {
   );
 
   if (platforms.length === 0) {
-    console.log(pc.yellow("No flavors configured yet. Use 'rnbuild flavor add' to create one."));
+    log(pc.yellow("No flavors configured yet. Use 'rnbuild flavor add' to create one."));
     return;
   }
 
@@ -141,7 +145,7 @@ async function handleList(config: LoadedConfig): Promise<void> {
     }
   }
 
-  console.log(table.toString());
+  log(table.toString());
   outro(pc.gray("Use 'rnbuild flavor set-default <platform> <name>' to set platform defaults."));
 }
 
@@ -336,7 +340,7 @@ async function handleDetect(cwd: string, config: LoadedConfig, platformArg?: str
   const detectedIos = !platform || platform === "ios" ? await detectIosSchemes(cwd, config.projectName) : undefined;
 
   if (!detectedAndroid && !detectedIos) {
-    console.log(pc.yellow("No Android flavors or iOS schemes detected."));
+    log(pc.yellow("No Android flavors or iOS schemes detected."));
     return;
   }
 
@@ -350,7 +354,7 @@ async function handleDetect(cwd: string, config: LoadedConfig, platformArg?: str
     table.push(["ios", detectedIos.options.join(", "), detectedIos.default ?? pc.dim("-")]);
   }
 
-  console.log(table.toString());
+  log(table.toString());
 
   const shouldImport = await inputConfirm("Import detected flavors into config?", true);
   if (!shouldImport) {

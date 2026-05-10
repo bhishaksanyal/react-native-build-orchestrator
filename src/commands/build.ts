@@ -1,8 +1,8 @@
 import path from "node:path";
 import os from "node:os";
 import fs from "fs-extra";
-import { confirm, intro, isCancel, outro, select, spinner } from "@clack/prompts";
 import pc from "picocolors";
+import { promptConfirm as confirm, promptSelect as select, intro, outro, spinner, log } from "../utils/logger.js";
 import { execa } from "execa";
 
 import { loadConfig } from "../utils/config.js";
@@ -336,11 +336,11 @@ async function runBuildWithLogs(params: {
         pending = pending.slice(newlineIndex + 1);
 
         if (params.rawLogs) {
-          console.log(line);
+          log(line);
         } else {
           const styled = stylePrettyLine(line);
           if (styled) {
-            console.log(styled);
+            log(styled);
           }
         }
       }
@@ -350,11 +350,11 @@ async function runBuildWithLogs(params: {
   if (pending.trim()) {
     rawLog += `${pending}\n`;
     if (params.rawLogs) {
-      console.log(pending);
+      log(pending);
     } else {
       const styled = stylePrettyLine(pending);
       if (styled) {
-        console.log(styled);
+        log(styled);
       }
     }
   }
@@ -369,7 +369,7 @@ async function runBuildWithLogs(params: {
   return logPath;
 }
 
-export async function runBuildCommand(options: BuildOptions): Promise<void> {
+export async function runBuildCommand(options: BuildOptions): Promise<any> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 
@@ -399,10 +399,6 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
         options: envNames.map((name) => ({ value: name, label: name })),
         initialValue: config.defaultEnvironment
       }));
-  if (isCancel(selectedEnv)) {
-    outro(pc.yellow("Build cancelled."));
-    return;
-  }
 
   const selectedType = options.type
     ? asBuildType(options.type)
@@ -410,10 +406,6 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
         message: "Choose build type",
         options: BUILD_TYPES.map((value) => ({ value, label: value }))
       }));
-  if (isCancel(selectedType)) {
-    outro(pc.yellow("Build cancelled."));
-    return;
-  }
 
   const selectedPlatform = options.platform
     ? asPlatform(options.platform)
@@ -421,10 +413,6 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
         message: "Choose platform",
         options: PLATFORMS.map((value) => ({ value, label: value }))
       }));
-  if (isCancel(selectedPlatform)) {
-    outro(pc.yellow("Build cancelled."));
-    return;
-  }
 
   const platformFlavorConfig = config.flavors?.[selectedPlatform as Platform];
   if (options.flavor && !platformFlavorConfig) {
@@ -439,10 +427,6 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
           initialValue: platformFlavorConfig.default ?? platformFlavorConfig.options[0]
         }))
     : undefined;
-  if (isCancel(selectedFlavor)) {
-    outro(pc.yellow("Build cancelled."));
-    return;
-  }
   if (options.flavor && platformFlavorConfig && !platformFlavorConfig.options.includes(options.flavor)) {
     throw new Error(
       `Flavor '${options.flavor}' is not configured for ${selectedPlatform}.`
@@ -483,10 +467,6 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
         ],
         initialValue: selectedType === "store" ? "bundle" : "apk"
       });
-      if (isCancel(artifactInput)) {
-        outro(pc.yellow("Build cancelled."));
-        return;
-      }
       selectedAndroidArtifact = artifactInput as AndroidArtifact;
     }
   }
@@ -552,36 +532,42 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
       )
     : undefined;
 
-  console.log(pc.gray(`Project: ${projectDir}`));
-  console.log(pc.gray(`Environment: ${selectedEnv}`));
-  console.log(pc.gray(`Build: ${selectedType}/${selectedPlatform}`));
+  log(pc.gray(`Project: ${projectDir}`));
+  log(pc.gray(`Environment: ${selectedEnv}`));
+  log(pc.gray(`Build: ${selectedType}/${selectedPlatform}`));
   if (selectedPlatform === "android") {
-    console.log(pc.gray(`Android artifact: ${selectedAndroidArtifact}`));
+    log(pc.gray(`Android artifact: ${selectedAndroidArtifact}`));
   }
   if (selectedFlavor) {
-    console.log(pc.gray(`Flavor: ${selectedFlavor}`));
+    log(pc.gray(`Flavor: ${selectedFlavor}`));
   }
-  console.log(pc.gray(`Command: ${finalCommand}`));
-  console.log(pc.gray(`Logs: ${options.rawLogs ? "raw" : "pretty"}`));
+  log(pc.gray(`Command: ${finalCommand}`));
+  log(pc.gray(`Logs: ${options.rawLogs ? "raw" : "pretty"}`));
   if (options.fast) {
-    console.log(pc.cyan("Fast mode: enabled (incremental/cached flags applied where possible)"));
+    log(pc.cyan("Fast mode: enabled (incremental/cached flags applied where possible)"));
   }
-  console.log("");
+  log("");
 
   if (options.dryRun) {
     outro(pc.yellow("Dry run complete. Command not executed."));
-    return;
+    return {
+      status: "success",
+      dryRun: true,
+      projectDir,
+      environment: selectedEnv,
+      buildType: selectedType,
+      platform: selectedPlatform,
+      flavor: selectedFlavor,
+      command: finalCommand
+    };
   }
 
   const shouldRun = await confirm({
     message: "Run this build command now?",
     initialValue: true
   });
-  if (isCancel(shouldRun) || !shouldRun) {
-    outro(pc.yellow("Build cancelled."));
-    return;
-  }
 
+  let logPath = '';
   const s = spinner();
   s.start(`Running ${selectedType}/${selectedPlatform} build...`);
   try {
@@ -591,7 +577,7 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
       runtimeVars
     );
 
-    const logPath = await runBuildWithLogs({
+    logPath = await runBuildWithLogs({
       command: finalCommand,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
@@ -603,17 +589,17 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
       }
     });
     s.stop(pc.green("Build command completed."));
-    console.log(pc.gray(`Full logs saved to: ${logPath}`));
-    console.log(pc.gray(`ENVFILE: ${runtimeArtifacts.runtimeEnvFilePath}`));
-    console.log(pc.gray(`App config wrapper: ${runtimeArtifacts.runtimeWrapperPath}`));
+    log(pc.gray(`Full logs saved to: ${logPath}`));
+    log(pc.gray(`ENVFILE: ${runtimeArtifacts.runtimeEnvFilePath}`));
+    log(pc.gray(`App config wrapper: ${runtimeArtifacts.runtimeWrapperPath}`));
     if (runtimeArtifacts.androidJsonPath) {
-      console.log(pc.gray(`Android native JSON: ${runtimeArtifacts.androidJsonPath}`));
+      log(pc.gray(`Android native JSON: ${runtimeArtifacts.androidJsonPath}`));
     }
     if (runtimeArtifacts.androidXmlPath) {
-      console.log(pc.gray(`Android native XML: ${runtimeArtifacts.androidXmlPath}`));
+      log(pc.gray(`Android native XML: ${runtimeArtifacts.androidXmlPath}`));
     }
     if (runtimeArtifacts.iosInfoPlistPaths.length > 0) {
-      console.log(pc.gray(`iOS Info.plist updated: ${runtimeArtifacts.iosInfoPlistPaths.length} file(s)`));
+      log(pc.gray(`iOS Info.plist updated: ${runtimeArtifacts.iosInfoPlistPaths.length} file(s)`));
     }
   } catch (error) {
     s.stop(pc.red("Build command failed."));
@@ -621,18 +607,31 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
   }
 
   if (outputHint) {
-    console.log(pc.green(`Expected output: ${outputHint}`));
+    log(pc.green(`Expected output: ${outputHint}`));
 
     const outputFolder = await resolveOutputFolder(projectDir, outputHint);
     if (outputFolder) {
       try {
         await openFolder(outputFolder);
-        console.log(pc.green(`Opened output folder: ${outputFolder}`));
+        log(pc.green(`Opened output folder: ${outputFolder}`));
       } catch {
-        console.log(pc.yellow(`Build succeeded but could not open folder: ${outputFolder}`));
+        log(pc.yellow(`Build succeeded but could not open folder: ${outputFolder}`));
       }
     }
   }
 
+
   outro(pc.bold(pc.green("Done.")));
+
+  return {
+    status: "success",
+    projectDir,
+    environment: selectedEnv,
+    buildType: selectedType,
+    platform: selectedPlatform,
+    flavor: selectedFlavor,
+    command: finalCommand,
+    logPath,
+    expectedArtifact: outputHint
+  };
 }

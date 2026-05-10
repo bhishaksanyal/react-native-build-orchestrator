@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "fs-extra";
-import { confirm, intro, isCancel, outro, select, spinner, text } from "@clack/prompts";
 import pc from "picocolors";
+import { promptConfirm as confirm, promptSelect as select, promptText as text, intro, outro, spinner, log } from "../utils/logger.js";
 import { execa } from "execa";
 
 import { runBuildCommand } from "./build.js";
@@ -97,11 +97,11 @@ async function runCommandWithLogs(params: {
         pending = pending.slice(newlineIndex + 1);
 
         if (params.rawLogs) {
-          console.log(line);
+          log(line);
         } else {
           const styled = styleLine(line);
           if (styled) {
-            console.log(styled);
+            log(styled);
           }
         }
       }
@@ -110,11 +110,11 @@ async function runCommandWithLogs(params: {
 
   if (pending.trim()) {
     if (params.rawLogs) {
-      console.log(pending);
+      log(pending);
     } else {
       const styled = styleLine(pending);
       if (styled) {
-        console.log(styled);
+        log(styled);
       }
     }
   }
@@ -216,9 +216,6 @@ async function promptTrack(platform: Platform, defaultTrack: string): Promise<st
         : "__custom__"
     });
 
-    if (isCancel(selected)) {
-      throw new Error("cancelled-by-user");
-    }
 
     if (selected !== "__custom__") {
       return String(selected);
@@ -236,9 +233,6 @@ async function promptTrack(platform: Platform, defaultTrack: string): Promise<st
         : "__custom__"
     });
 
-    if (isCancel(selected)) {
-      throw new Error("cancelled-by-user");
-    }
 
     if (selected !== "__custom__") {
       return String(selected);
@@ -250,14 +244,11 @@ async function promptTrack(platform: Platform, defaultTrack: string): Promise<st
     defaultValue: defaultTrack,
     placeholder: defaultTrack
   });
-  if (isCancel(custom)) {
-    throw new Error("cancelled-by-user");
-  }
   const value = String(custom).trim();
   return value || defaultTrack;
 }
 
-export async function runReleaseCommand(options: ReleaseOptions): Promise<void> {
+export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 
@@ -273,10 +264,6 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
         options: envNames.map((name) => ({ value: name, label: name })),
         initialValue: config.defaultEnvironment
       }));
-  if (isCancel(selectedEnv)) {
-    outro(pc.yellow("Release cancelled."));
-    return;
-  }
 
   const selectedPlatform = options.platform
     ? asPlatform(options.platform)
@@ -284,10 +271,6 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
         message: "Choose platform",
         options: PLATFORMS.map((value) => ({ value, label: value }))
       }));
-  if (isCancel(selectedPlatform)) {
-    outro(pc.yellow("Release cancelled."));
-    return;
-  }
 
   const platform = selectedPlatform as Platform;
   const platformFlavorConfig = config.flavors?.[platform];
@@ -305,11 +288,6 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
         }))
     : undefined;
 
-  if (isCancel(selectedFlavor)) {
-    outro(pc.yellow("Release cancelled."));
-    return;
-  }
-
   if (options.flavor && platformFlavorConfig && !platformFlavorConfig.options.includes(options.flavor)) {
     throw new Error(`Flavor '${options.flavor}' is not configured for ${platform}.`);
   }
@@ -321,10 +299,6 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
         options: BUILD_TYPES.map((value) => ({ value, label: value })),
         initialValue: "store"
       }));
-  if (isCancel(selectedType)) {
-    outro(pc.yellow("Release cancelled."));
-    return;
-  }
 
   const buildProfile = config.builds[selectedType as BuildType];
   const buildTarget = buildProfile?.[platform];
@@ -351,11 +325,6 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
         initialValue: selectedType === "store" ? "bundle" : "apk"
       });
 
-      if (isCancel(artifactInput)) {
-        outro(pc.yellow("Release cancelled."));
-        return;
-      }
-
       selectedAndroidArtifact = artifactInput as AndroidArtifact;
     }
 
@@ -373,10 +342,6 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
         defaultValue: defaultLane,
         placeholder: defaultLane
       }));
-  if (isCancel(laneInput)) {
-    outro(pc.yellow("Release cancelled."));
-    return;
-  }
   const selectedLane = String(laneInput).trim() || defaultLane;
 
   const defaultTrack =
@@ -444,25 +409,25 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
   }
 
   intro(pc.bold(pc.cyan("RN Build Helper Release")));
-  console.log(pc.gray(`Project: ${projectDir}`));
-  console.log(pc.gray(`Environment: ${selectedEnv}`));
-  console.log(pc.gray(`Platform: ${platform}`));
+  log(pc.gray(`Project: ${projectDir}`));
+  log(pc.gray(`Environment: ${selectedEnv}`));
+  log(pc.gray(`Platform: ${platform}`));
   if (selectedFlavor) {
-    console.log(pc.gray(`Flavor: ${selectedFlavor}`));
+    log(pc.gray(`Flavor: ${selectedFlavor}`));
   }
-  console.log(pc.gray(`Build type: ${selectedType}`));
-  console.log(pc.gray(`Lane: ${selectedLane}`));
-  console.log(pc.gray(`Track: ${selectedTrack}`));
+  log(pc.gray(`Build type: ${selectedType}`));
+  log(pc.gray(`Lane: ${selectedLane}`));
+  log(pc.gray(`Track: ${selectedTrack}`));
   if (uploadArtifactType) {
-    console.log(pc.gray(`Upload artifact type: ${uploadArtifactType}`));
+    log(pc.gray(`Upload artifact type: ${uploadArtifactType}`));
   }
   if (selectedArtifactPath) {
-    console.log(pc.gray(`Expected artifact path: ${selectedArtifactPath}`));
+    log(pc.gray(`Expected artifact path: ${selectedArtifactPath}`));
   }
   if (options.dryRun) {
-    console.log(pc.yellow("Dry run mode: build command will be previewed and upload will be skipped."));
+    log(pc.yellow("Dry run mode: build command will be previewed and upload will be skipped."));
   }
-  console.log("");
+  log("");
 
   // Always build first
   await runBuildCommand({
@@ -479,7 +444,19 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
 
   if (options.dryRun) {
     outro(pc.bold(pc.green("Release dry run complete.")));
-    return;
+    return {
+      status: "success",
+      dryRun: true,
+      projectDir,
+      environment: selectedEnv,
+      platform,
+      flavor: selectedFlavor,
+      buildType: selectedType,
+      upload: {
+        lane: selectedLane,
+        track: selectedTrack
+      }
+    };
   }
 
   if (!selectedArtifactPath) {
@@ -487,10 +464,6 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
       message: `Path to ${uploadArtifactType ?? "build"} artifact for upload`,
       placeholder: platform === "android" ? "android/app/build/outputs/..." : "ios/build/... .ipa"
     });
-    if (isCancel(artifactPathInput)) {
-      outro(pc.yellow("Release cancelled."));
-      return;
-    }
     selectedArtifactPath = String(artifactPathInput).trim();
   }
 
@@ -550,22 +523,18 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
     uploadMergedVars
   );
 
-  console.log(pc.bold(pc.cyan("Upload Phase")));
-  console.log(pc.gray(`Lane: ${selectedLane}`));
-  console.log(pc.gray(`Track: ${selectedTrack}`));
-  console.log(pc.gray(`Artifact: ${resolvedArtifactPath}`));
-  console.log(pc.gray(`Command: ${uploadCommand}`));
-  console.log("");
+  log(pc.bold(pc.cyan("Upload Phase")));
+  log(pc.gray(`Lane: ${selectedLane}`));
+  log(pc.gray(`Track: ${selectedTrack}`));
+  log(pc.gray(`Artifact: ${resolvedArtifactPath}`));
+  log(pc.gray(`Command: ${uploadCommand}`));
+  log("");
 
   if (!options.ci) {
     const shouldRun = await confirm({
       message: "Run Fastlane upload now?",
       initialValue: true
     });
-    if (isCancel(shouldRun) || !shouldRun) {
-      outro(pc.yellow("Upload cancelled."));
-      return;
-    }
   }
 
   const runtimeArtifacts = await writeRuntimeEnvExports(projectDir, String(selectedEnv), uploadRuntimeVars);
@@ -587,15 +556,15 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
       }
     });
     s.stop(pc.green("Fastlane upload completed."));
-    console.log(pc.gray(`ENVFILE: ${runtimeArtifacts.runtimeEnvFilePath}`));
+    log(pc.gray(`ENVFILE: ${runtimeArtifacts.runtimeEnvFilePath}`));
     if (runtimeArtifacts.androidJsonPath) {
-      console.log(pc.gray(`Android native JSON: ${runtimeArtifacts.androidJsonPath}`));
+      log(pc.gray(`Android native JSON: ${runtimeArtifacts.androidJsonPath}`));
     }
     if (runtimeArtifacts.androidXmlPath) {
-      console.log(pc.gray(`Android native XML: ${runtimeArtifacts.androidXmlPath}`));
+      log(pc.gray(`Android native XML: ${runtimeArtifacts.androidXmlPath}`));
     }
     if (runtimeArtifacts.iosInfoPlistPaths.length > 0) {
-      console.log(pc.gray(`iOS Info.plist updated: ${runtimeArtifacts.iosInfoPlistPaths.length} file(s)`));
+      log(pc.gray(`iOS Info.plist updated: ${runtimeArtifacts.iosInfoPlistPaths.length} file(s)`));
     }
   } catch (error) {
     s.stop(pc.red("Fastlane upload failed."));
@@ -603,4 +572,18 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
   }
 
   outro(pc.bold(pc.green("Release completed.")));
+
+  return {
+    status: "success",
+    projectDir,
+    environment: selectedEnv,
+    platform,
+    flavor: selectedFlavor,
+    buildType: selectedType,
+    upload: {
+      lane: selectedLane,
+      track: selectedTrack,
+      artifactPath: resolvedArtifactPath
+    }
+  };
 }
