@@ -1,5 +1,5 @@
 import path from "node:path";
-import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, checkCancel } from "../utils/logger.js";
+import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, checkCancel, isCancel } from "../utils/logger.js";
 import pc from "picocolors";
 import fs from "fs-extra";
 import yaml from "js-yaml";
@@ -7,7 +7,7 @@ import { CONFIG_FILE, loadConfig, writeConfig } from "../utils/config.js";
 import { detectEnvironmentsFromDotEnv } from "../utils/environment-detection.js";
 import { readDotEnv } from "../utils/env.js";
 import { syncRuntimeEnvFromConfig } from "../utils/sync-runtime-env.js";
-import type { EnvironmentConfig, RNBuildConfig } from "../types.js";
+import type { EnvironmentConfig, RNBuildConfig, EnvSummary } from "../types.js";
 import { createTable } from "../utils/ui.js";
 
 type EnvAction = "list" | "view" | "add" | "edit" | "remove" | "set-default" | "detect";
@@ -18,7 +18,7 @@ function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) {
     throw new Error(CANCELLED);
   }
-  return value;
+  return value as T;
 }
 
 async function chooseEnv(envNames: string[], message: string, initialValue?: string): Promise<string> {
@@ -82,7 +82,7 @@ async function loadConfigForEnvCommand(cwd: string): Promise<LoadedConfig> {
   }
 }
 
-export async function runEnvCommand(action?: EnvAction, envName?: string): Promise<any> {
+export async function runEnvCommand(action?: EnvAction, envName?: string): Promise<EnvSummary> {
   const cwd = process.cwd();
   const config = await loadConfigForEnvCommand(cwd);
 
@@ -134,7 +134,7 @@ export async function runEnvCommand(action?: EnvAction, envName?: string): Promi
   } catch (error) {
     if (error instanceof Error && error.message === CANCELLED) {
       outro(pc.yellow("Cancelled."));
-      return;
+      return { status: "cancelled" };
     }
     throw error;
   }

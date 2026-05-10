@@ -1,9 +1,9 @@
-import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, checkCancel } from "../utils/logger.js";
+import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, isCancel } from "../utils/logger.js";
 import pc from "picocolors";
 
 import { loadConfig, writeConfig } from "../utils/config.js";
 import { detectAndroidFlavors, detectIosSchemes } from "../utils/flavor-detection.js";
-import type { FlavorPlatformConfig, Platform } from "../types.js";
+import type { FlavorPlatformConfig, Platform, FlavorSummary } from "../types.js";
 import { createTable } from "../utils/ui.js";
 
 type FlavorAction = "list" | "add" | "edit" | "remove" | "set-default" | "detect";
@@ -62,7 +62,7 @@ export async function runFlavorCommand(
   action?: FlavorAction,
   platformArg?: string,
   flavorArg?: string
-): Promise<void> {
+): Promise<FlavorSummary> {
   const cwd = process.cwd();
   const config = await loadConfig(cwd);
 
@@ -110,7 +110,7 @@ export async function runFlavorCommand(
   } catch (error) {
     if (error instanceof Error && error.message === CANCELLED) {
       outro(pc.yellow("Cancelled."));
-      return;
+      return { status: "cancelled" };
     }
     throw error;
   }

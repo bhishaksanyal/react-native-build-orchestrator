@@ -13,7 +13,8 @@ import {
   PLATFORMS,
   type AndroidArtifact,
   type BuildType,
-  type Platform
+  type Platform,
+  type ReleaseSummary
 } from "../types.js";
 
 interface ReleaseOptions {
@@ -248,7 +249,7 @@ async function promptTrack(platform: Platform, defaultTrack: string): Promise<st
   return value || defaultTrack;
 }
 
-export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
+export async function runReleaseCommand(options: ReleaseOptions): Promise<ReleaseSummary> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 
@@ -349,11 +350,11 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
   let selectedTrack = options.track;
   if (!selectedTrack) {
     try {
-      selectedTrack = await promptTrack(platform, defaultTrack);
+      selectedTrack = await promptTrack(platform as any, defaultTrack);
     } catch (error) {
       if (error instanceof Error && error.message === "cancelled-by-user") {
         outro(pc.yellow("Release cancelled."));
-        return;
+        return { status: "cancelled" };
       }
       throw error;
     }
@@ -374,8 +375,8 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
   const envFileVars = envConfig.envFile ? await readDotEnv(envFilePath) : {};
   const runtimeVars = createRuntimeVars({
     envName: String(selectedEnv),
-    buildType: selectedType as BuildType,
-    platform,
+    buildType: selectedType as any as BuildType,
+    platform: platform as any,
     flavor: selectedFlavor as string | undefined,
     envFileVars,
     envConfigVars: envConfig.vars ?? {}
@@ -386,7 +387,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
     PROJECT_NAME: config.projectName,
     ENV_NAME: String(selectedEnv),
     BUILD_TYPE: selectedType as BuildType,
-    PLATFORM: platform,
+    PLATFORM: platform as any,
     FLAVOR: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_NAME: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_VALUE: resolvedFlavor,
@@ -433,7 +434,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
   await runBuildCommand({
     env: String(selectedEnv),
     type: selectedType as BuildType,
-    platform,
+    platform: platform as any,
     flavor: selectedFlavor as string | undefined,
     androidArtifact: selectedAndroidArtifact,
     cwd: projectDir,
@@ -448,10 +449,10 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
       status: "success",
       dryRun: true,
       projectDir,
-      environment: selectedEnv,
-      platform,
-      flavor: selectedFlavor,
-      buildType: selectedType,
+      environment: selectedEnv as any,
+      platform: platform as any,
+      flavor: selectedFlavor as any,
+      buildType: selectedType as any,
       upload: {
         lane: selectedLane,
         track: selectedTrack
@@ -490,8 +491,8 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
 
   const uploadRuntimeVars = createRuntimeVars({
     envName: String(selectedEnv),
-    buildType: selectedType as BuildType,
-    platform,
+    buildType: selectedType as any as BuildType,
+    platform: platform as any,
     flavor: selectedFlavor as string | undefined,
     envFileVars: uploadEnvFileVars,
     envConfigVars: uploadEnvConfig.vars ?? {}
@@ -502,7 +503,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
     PROJECT_NAME: config.projectName,
     ENV_NAME: String(selectedEnv),
     BUILD_TYPE: selectedType as BuildType,
-    PLATFORM: platform,
+    PLATFORM: platform as any,
     FLAVOR: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_NAME: (selectedFlavor as string | undefined) ?? "",
     FLAVOR_VALUE: resolvedFlavor
@@ -576,10 +577,10 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<any> {
   return {
     status: "success",
     projectDir,
-    environment: selectedEnv,
-    platform,
-    flavor: selectedFlavor,
-    buildType: selectedType,
+    environment: selectedEnv as any,
+    platform: platform as any,
+    flavor: selectedFlavor as any,
+    buildType: selectedType as any,
     upload: {
       lane: selectedLane,
       track: selectedTrack,

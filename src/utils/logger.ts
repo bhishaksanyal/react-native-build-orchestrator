@@ -1,4 +1,5 @@
 import { intro as clackIntro, outro as clackOutro, spinner as clackSpinner, text, select, confirm, isCancel } from "@clack/prompts";
+export { isCancel };
 import pc from "picocolors";
 
 let isCiMode = false;
@@ -52,11 +53,11 @@ export function spinner(): ReturnType<typeof clackSpinner> {
   return clackSpinner();
 }
 
-export function printJson(data: any): void {
+export function printJson(data: unknown): void {
   process.stdout.write(JSON.stringify(data, null, 2) + "\n");
 }
 
-export function checkCancel(value: any | symbol): boolean {
+export function checkCancel(value: unknown): boolean {
   if (isCancel(value)) {
     outro(pc.yellow("Operation cancelled."));
     process.exit(0);
@@ -64,9 +65,9 @@ export function checkCancel(value: any | symbol): boolean {
   return false;
 }
 
-export async function promptSelect<T>(options: any): Promise<T> {
+export async function promptSelect<T>(options: Parameters<typeof select>[0]): Promise<T> {
   if (isCiMode) {
-    throw new Error(`Prompt required but running in CI mode: ${options.message}`);
+    throw new Error(`Prompt required but running in CI mode: ${(options as any).message}`);
   }
   const result = await select(options);
   if (isCancel(result)) {
@@ -76,9 +77,9 @@ export async function promptSelect<T>(options: any): Promise<T> {
   return result as T;
 }
 
-export async function promptText(options: any): Promise<string> {
+export async function promptText(options: Parameters<typeof text>[0]): Promise<string> {
   if (isCiMode) {
-    throw new Error(`Prompt required but running in CI mode: ${options.message}`);
+    throw new Error(`Prompt required but running in CI mode: ${(options as any).message}`);
   }
   const result = await text(options);
   if (isCancel(result)) {
@@ -88,9 +89,9 @@ export async function promptText(options: any): Promise<string> {
   return String(result);
 }
 
-export async function promptConfirm(options: any): Promise<boolean> {
+export async function promptConfirm(options: Parameters<typeof confirm>[0]): Promise<boolean> {
   if (isCiMode) {
-    return options.initialValue ?? true;
+    return (options as any).initialValue ?? true;
   }
   const result = await confirm(options);
   if (isCancel(result)) {

@@ -4,7 +4,7 @@ import pc from "picocolors";
 import { intro, outro, promptSelect as select, promptText as text, log } from "../utils/logger.js";
 
 import { loadConfig } from "../utils/config.js";
-import { PLATFORMS, type Platform } from "../types.js"; // PLATFORMS used for asPlatform guard
+import { PLATFORMS, type Platform, type VersionSummary } from "../types.js"; // PLATFORMS used for asPlatform guard
 
 interface VersionOptions {
   platform?: string;
@@ -380,7 +380,7 @@ async function updatePackageJsonVersion(
 
 // ─── Main command ─────────────────────────────────────────────────────────────
 
-export async function runVersionCommand(options: VersionOptions): Promise<any> {
+export async function runVersionCommand(options: VersionOptions): Promise<VersionSummary> {
   const projectDir = options.cwd ? toAbsoluteFromCwd(process.cwd(), options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 

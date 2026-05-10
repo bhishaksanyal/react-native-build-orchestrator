@@ -3,8 +3,9 @@ import fs from "fs-extra";
 import pc from "picocolors";
 import { intro, outro, log } from "../utils/logger.js";
 import { createTable } from "../utils/ui.js";
+import type { DoctorSummary } from "../types.js";
 
-export async function runDoctorCommand(cwd?: string): Promise<any> {
+export async function runDoctorCommand(cwd?: string): Promise<DoctorSummary> {
   const projectDir = cwd ? path.resolve(cwd) : process.cwd();
 
   const checks = await Promise.all([

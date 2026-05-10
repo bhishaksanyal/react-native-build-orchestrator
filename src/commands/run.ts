@@ -6,7 +6,7 @@ import { execa } from "execa";
 import { loadConfig } from "../utils/config.js";
 import { interpolate, readDotEnv } from "../utils/env.js";
 import { createRuntimeVars, writeRuntimeEnvExports } from "../utils/runtime-exports.js";
-import { PLATFORMS, type Platform } from "../types.js";
+import { PLATFORMS, type Platform, type BuildSummary } from "../types.js";
 
 interface RunOptions {
   env?: string;
@@ -289,7 +289,7 @@ async function runCommandWithLogs(params: {
   }
 }
 
-export async function runAppCommand(options: RunOptions): Promise<any> {
+export async function runAppCommand(options: RunOptions): Promise<BuildSummary> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 
@@ -346,7 +346,7 @@ export async function runAppCommand(options: RunOptions): Promise<any> {
   const runtimeVars = createRuntimeVars({
     envName: selectedEnv as string,
     buildType: "development",
-    platform: selectedPlatform as Platform,
+    platform: selectedPlatform as any as Platform,
     flavor: selectedFlavor as string | undefined,
     envFileVars,
     envConfigVars: envConfig.vars ?? {}
@@ -366,7 +366,7 @@ export async function runAppCommand(options: RunOptions): Promise<any> {
 
   const runCommand = interpolate(
     buildRunCommand({
-      platform: selectedPlatform as Platform,
+      platform: selectedPlatform as any as Platform,
       flavorValue: resolvedFlavor || undefined,
       noPackager: options.noPackager
     }),
@@ -397,7 +397,7 @@ export async function runAppCommand(options: RunOptions): Promise<any> {
       command: runCommand,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
-      platform: selectedPlatform as Platform,
+      platform: selectedPlatform as any as Platform,
       env: {
         ...process.env,
         ...mergedVars,
@@ -435,9 +435,9 @@ export async function runAppCommand(options: RunOptions): Promise<any> {
   return {
     status: "success",
     projectDir,
-    environment: selectedEnv,
-    platform: selectedPlatform,
-    flavor: selectedFlavor,
+    environment: selectedEnv as any,
+    platform: selectedPlatform as any,
+    flavor: selectedFlavor as any,
     command: runCommand
   };
 }

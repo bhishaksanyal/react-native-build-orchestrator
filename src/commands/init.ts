@@ -1,5 +1,6 @@
 import path from "node:path";
 import { intro, outro, log } from "../utils/logger.js";
+import type { InitSummary } from "../types.js";
 import pc from "picocolors";
 import fs from "fs-extra";
 
@@ -105,7 +106,7 @@ async function detectOrCreateEnvironments(projectDir: string): Promise<RNBuildCo
   };
 }
 
-export async function runInitCommand(options: { force: boolean; projectName?: string }): Promise<any> {
+export async function runInitCommand(options: { force: boolean; projectName?: string }): Promise<InitSummary> {
   const cwd = process.cwd();
   const configPath = path.join(cwd, CONFIG_FILE);
   const exists = await fs.pathExists(configPath);

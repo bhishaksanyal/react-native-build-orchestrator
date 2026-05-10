@@ -88,5 +88,5 @@ const configSchema = z.object({
 });
 
 export function parseConfig(input: unknown): RNBuildConfig {
-  return configSchema.parse(input);
+  return configSchema.parse(input) as RNBuildConfig;
 }

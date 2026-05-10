@@ -1,10 +1,10 @@
 import path from "node:path";
 import fs from "fs-extra";
-import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, checkCancel } from "../utils/logger.js";
+import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, checkCancel, isCancel } from "../utils/logger.js";
 import pc from "picocolors";
 
 import { loadConfig, writeConfig } from "../utils/config.js";
-import type { FastlaneConfig } from "../types.js";
+import type { FastlaneConfig, FastlaneSummary } from "../types.js";
 
 interface FastlaneSetupOptions {
   cwd?: string;
@@ -101,7 +101,7 @@ async function maybePromptWithDefault(message: string, defaultValue: string): Pr
   return String(value).trim();
 }
 
-export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Promise<any> {
+export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Promise<FastlaneSummary> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 

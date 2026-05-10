@@ -14,7 +14,9 @@ import { runAppCommand } from "./commands/run.js";
 import { runVersionCommand } from "./commands/version.js";
 import { setCiMode, getCiMode, printJson } from "./utils/logger.js";
 
-async function withErrorHandler(name: string, isCi: boolean | undefined, fn: () => Promise<any>) {
+import { type CommandResult } from "./types.js";
+
+async function withErrorHandler(name: string, isCi: boolean | undefined, fn: () => Promise<CommandResult | void>) {
   try {
     if (isCi) setCiMode(true);
     const result = await fn();

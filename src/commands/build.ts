@@ -13,7 +13,8 @@ import {
   PLATFORMS,
   type AndroidArtifact,
   type BuildType,
-  type Platform
+  type Platform,
+  type BuildSummary
 } from "../types.js";
 
 const ANDROID_ARTIFACTS: AndroidArtifact[] = ["apk", "bundle"];
@@ -369,7 +370,7 @@ async function runBuildWithLogs(params: {
   return logPath;
 }
 
-export async function runBuildCommand(options: BuildOptions): Promise<any> {
+export async function runBuildCommand(options: BuildOptions): Promise<BuildSummary> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 
@@ -475,8 +476,8 @@ export async function runBuildCommand(options: BuildOptions): Promise<any> {
   const envFileVars = envConfig.envFile ? await readDotEnv(envFilePath) : {};
   const runtimeVars = createRuntimeVars({
     envName: selectedEnv as string,
-    buildType: selectedType as BuildType,
-    platform: selectedPlatform as Platform,
+    buildType: selectedType as any as BuildType,
+    platform: selectedPlatform as any as Platform,
     flavor: selectedFlavor as string | undefined,
     envFileVars,
     envConfigVars: envConfig.vars ?? {}
@@ -554,10 +555,10 @@ export async function runBuildCommand(options: BuildOptions): Promise<any> {
       status: "success",
       dryRun: true,
       projectDir,
-      environment: selectedEnv,
-      buildType: selectedType,
-      platform: selectedPlatform,
-      flavor: selectedFlavor,
+      environment: selectedEnv as any,
+      buildType: selectedType as any,
+      platform: selectedPlatform as any,
+      flavor: selectedFlavor as any,
       command: finalCommand
     };
   }
@@ -626,10 +627,10 @@ export async function runBuildCommand(options: BuildOptions): Promise<any> {
   return {
     status: "success",
     projectDir,
-    environment: selectedEnv,
-    buildType: selectedType,
-    platform: selectedPlatform,
-    flavor: selectedFlavor,
+    environment: selectedEnv as any,
+    buildType: selectedType as any,
+    platform: selectedPlatform as any,
+    flavor: selectedFlavor as any,
     command: finalCommand,
     logPath,
     expectedArtifact: outputHint
