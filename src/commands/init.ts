@@ -1,6 +1,6 @@
 import path from "node:path";
 import { intro, outro, log } from "../utils/logger.js";
-import type { InitSummary } from "../types.js";
+import { type InitSummary, type RNBuildConfig } from "../types.js";
 import pc from "picocolors";
 import fs from "fs-extra";
 
@@ -9,7 +9,6 @@ import { readDotEnv } from "../utils/env.js";
 import { detectEnvironmentsFromDotEnv } from "../utils/environment-detection.js";
 import { detectAndroidFlavors, detectIosSchemes } from "../utils/flavor-detection.js";
 import { syncRuntimeEnvFromConfig } from "../utils/sync-runtime-env.js";
-import type { RNBuildConfig } from "../types.js";
 
 function createDefaultConfig(projectName = "my-rn-app"): RNBuildConfig {
   return {

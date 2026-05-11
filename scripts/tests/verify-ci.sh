@@ -93,7 +93,7 @@ set +e
 run_cmd version --ci --version 9.9.9 --android-build-number 999 --ios-build-number 999 > stdout.txt 2> stderr.txt
 EXIT_CODE=$?
 set -e
-if grep -q "$PKG_VERSION" stdout.txt; then
+if grep -F -q "$PKG_VERSION" stdout.txt; then
   echo "❌ Global version clash detected!"
   exit 1
 fi

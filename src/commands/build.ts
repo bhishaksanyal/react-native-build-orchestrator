@@ -2,7 +2,7 @@ import path from "node:path";
 import os from "node:os";
 import fs from "fs-extra";
 import pc from "picocolors";
-import { promptConfirm as confirm, promptSelect as select, intro, outro, spinner, log } from "../utils/logger.js";
+import { promptConfirm as confirm, promptSelect as select, intro, outro, spinner, log, isCancel } from "../utils/logger.js";
 import { execa } from "execa";
 
 import { loadConfig } from "../utils/config.js";
@@ -27,6 +27,7 @@ interface BuildOptions {
   androidArtifact?: string;
   cwd?: string;
   dryRun?: boolean;
+  ci?: boolean;
   fast?: boolean;
   rawLogs?: boolean;
 }
@@ -563,10 +564,15 @@ export async function runBuildCommand(options: BuildOptions): Promise<BuildSumma
     };
   }
 
-  const shouldRun = await confirm({
-    message: "Run this build command now?",
-    initialValue: true
-  });
+  if (!options.ci) {
+    const shouldRun = await confirm({
+      message: "Run this build command now?",
+      initialValue: true
+    });
+    if (isCancel(shouldRun) || !shouldRun) {
+      return { status: "cancelled", message: "Build skipped by user" };
+    }
+  }
 
   let logPath = '';
   const s = spinner();

@@ -65,7 +65,7 @@ export function checkCancel(value: unknown): boolean {
   return false;
 }
 
-export async function promptSelect<T>(options: Parameters<typeof select>[0]): Promise<T> {
+export async function promptSelect<T = string>(options: Parameters<typeof select>[0]): Promise<T> {
   if (isCiMode) {
     throw new Error(`Prompt required but running in CI mode: ${(options as { message: string }).message}`);
   }

@@ -567,13 +567,13 @@ export async function runVersionCommand(options: VersionOptions): Promise<Versio
         if (version)        log(pc.green(`iOS  MARKETING_VERSION (all targets) → ${path.relative(projectDir, r.pbxprojPath)}`));
         if (iosBuildNumber) log(pc.green(`iOS  CURRENT_PROJECT_VERSION (${r.buildTarget}) → ${path.relative(projectDir, r.pbxprojPath)}`));
 
-          // ── Execute: package.json ─────────────────────────────────────────────
-          if (version) {
-            const pkgPath = await updatePackageJsonVersion(projectDir, version);
-            log(pc.green(`package.json  version → ${path.relative(projectDir, pkgPath)}`));
-          }
-      }
     }
+  }
+
+  if (version) {
+    const pkgPath = await updatePackageJsonVersion(projectDir, version);
+    log(pc.green(`package.json  version → ${path.relative(projectDir, pkgPath)}`));
+  }
 
 
     outro(pc.bold(pc.green("Done.")));

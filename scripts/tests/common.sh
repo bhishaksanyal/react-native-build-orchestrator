@@ -33,7 +33,7 @@ function assert_exit_code() {
 function assert_stderr_contains() {
   local pattern=$1
   local file=$2
-  if grep -q "$pattern" "$file"; then
+  if grep -F -q "$pattern" "$file"; then
     echo -e "  ${GREEN}✅ Stderr contains: $pattern${NC}"
   else
     echo -e "  ${RED}❌ Pattern '$pattern' not found in stderr${NC}"

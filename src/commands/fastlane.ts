@@ -145,7 +145,7 @@ export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Pr
           { value: "production", label: "production" }
         ],
         initialValue: config.fastlane?.android?.defaultTrack ?? "internal"
-      }) as string;
+      });
       const packageName = await maybePromptWithDefault(
         "Android package name (applicationId)",
         config.fastlane?.android?.packageName ?? ""
@@ -170,7 +170,7 @@ export async function runFastlaneSetupCommand(options: FastlaneSetupOptions): Pr
           { value: "app_store", label: "app_store" }
         ],
         initialValue: config.fastlane?.ios?.defaultTrack ?? "testflight"
-      }) as string;
+      });
       const appIdentifier = await maybePromptWithDefault(
         "iOS app identifier (bundle id)",
         config.fastlane?.ios?.appIdentifier ?? ""
