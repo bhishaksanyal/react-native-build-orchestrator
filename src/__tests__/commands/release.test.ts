@@ -126,11 +126,11 @@ describe("release command", () => {
       expect(execa).not.toHaveBeenCalled();
   });
 
-  it("throws for missing release config", async () => {
+  it("throws for missing environment config", async () => {
       const config = JSON.parse(JSON.stringify(MOCK_CONFIG));
-      delete config.release;
+      config.environments = {};
       loadConfig.mockResolvedValue(config);
-      await expect(runReleaseCommand({ platform: "android" })).rejects.toThrow(/not configured/);
+      await expect(runReleaseCommand({ platform: "android", env: "prod" })).rejects.toThrow(/required before release/);
   });
 
   it("handles build failure", async () => {

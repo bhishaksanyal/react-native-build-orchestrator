@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import path from "node:path";
 import { jest } from "@jest/globals";
 
 jest.unstable_mockModule("fs-extra", () => ({
@@ -27,12 +28,16 @@ describe("runtime exports utility", () => {
     });
     expect(vars.FILE_KEY).toBe("file_val");
     expect(vars.CONFIG_KEY).toBe("config_val");
-    expect(vars.RN_BUILD_ENV_NAME).toBe("prod");
+    expect(vars.RNBUILD_ENV_NAME).toBe("prod");
   });
 
   describe("writeRuntimeEnvExports", () => {
     beforeEach(() => {
-        (fs.pathExists as any).mockResolvedValue(true);
+        jest.clearAllMocks();
+        (fs.pathExists as any).mockImplementation((p: string) => {
+            if (p.includes("android")) return Promise.resolve(false);
+            return Promise.resolve(true);
+        });
         (fs.ensureDir as any).mockResolvedValue(undefined);
         (fs.writeFile as any).mockResolvedValue(undefined);
         (fs.readdir as any).mockResolvedValue([]);
@@ -47,18 +52,39 @@ describe("runtime exports utility", () => {
     });
 
     it("updates ios Info.plist if they exist", async () => {
-        (fs.readdir as any).mockResolvedValueOnce([
-            { name: "App", isDirectory: () => true, isFile: () => false },
-            { name: "Pods", isDirectory: () => true, isFile: () => false }
-        ] as any);
-        (fs.readdir as any).mockImplementation((p: string) => {
-            if (p.includes("App")) return Promise.resolve([
-                { name: "Info.plist", isDirectory: () => false, isFile: () => true } as any
-            ]);
+        (fs.pathExists as any).mockImplementation((p: string) => {
+            const normalizedPath = p.replace(/\\/g, "/");
+            if (normalizedPath.includes("android")) return Promise.resolve(false);
+            if (normalizedPath.endsWith("ios")) return Promise.resolve(true);
+            return Promise.resolve(true);
+        });
+
+        (fs.readdir as any).mockImplementation((p: string, options: any) => {
+            const normalizedPath = p.replace(/\\/g, "/");
+            if (normalizedPath.endsWith("/ios")) {
+                const entries = [
+                    { name: "App", isDirectory: () => true, isFile: () => false, isSymlink: () => false },
+                    { name: "Pods", isDirectory: () => true, isFile: () => false, isSymlink: () => false }
+                ] as any;
+                return Promise.resolve(options?.withFileTypes ? entries : ["App", "Pods"]);
+            }
+            if (normalizedPath.endsWith("/ios/App")) {
+                const entries = [
+                    { name: "Info.plist", isDirectory: () => false, isFile: () => true, isSymlink: () => false }
+                ] as any;
+                return Promise.resolve(options?.withFileTypes ? entries : ["Info.plist"]);
+            }
             return Promise.resolve([]);
         });
-        await writeRuntimeEnvExports("/app", "prod", { KEY: "VAL" });
-        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("Info.plist"), expect.any(String));
+
+        (fs.readFile as any).mockImplementation((p: string) => {
+            const normalizedPath = p.replace(/\\/g, "/");
+            if (normalizedPath.endsWith("Info.plist")) return Promise.resolve("<dict>\n</dict>");
+            return Promise.resolve("// some content");
+        });
+
+        const res = await writeRuntimeEnvExports("/app", "prod", { KEY: "VAL" });
+        expect(res.iosInfoPlistPaths).toContain(path.join("/app", "ios", "App", "Info.plist"));
     });
   });
 });
