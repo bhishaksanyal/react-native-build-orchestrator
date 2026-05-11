@@ -1,10 +1,10 @@
 import path from "node:path";
 import fs from "fs-extra";
-import { intro, isCancel, outro, select, text } from "@clack/prompts";
 import pc from "picocolors";
+import { intro, outro, promptSelect as select, promptText as text, log } from "../utils/logger.js";
 
 import { loadConfig } from "../utils/config.js";
-import { PLATFORMS, type Platform } from "../types.js"; // PLATFORMS used for asPlatform guard
+import { PLATFORMS, type Platform, type VersionSummary } from "../types.js"; // PLATFORMS used for asPlatform guard
 
 interface VersionOptions {
   platform?: string;
@@ -16,16 +16,10 @@ interface VersionOptions {
   /** iOS CURRENT_PROJECT_VERSION */
   iosBuildNumber?: string;
   cwd?: string;
+  ci?: boolean;
 }
 
-const CANCELLED = "cancelled-by-user";
-
-function unwrap<T>(value: T | symbol): T {
-  if (isCancel(value)) {
-    throw new Error(CANCELLED);
-  }
-  return value;
-}
+import { isCancel } from "../utils/logger.js";
 
 function asPlatform(input: string): Platform {
   if (!PLATFORMS.includes(input as Platform)) {
@@ -389,7 +383,7 @@ async function updatePackageJsonVersion(
 
 // ─── Main command ─────────────────────────────────────────────────────────────
 
-export async function runVersionCommand(options: VersionOptions): Promise<void> {
+export async function runVersionCommand(options: VersionOptions): Promise<VersionSummary> {
   const projectDir = options.cwd ? toAbsoluteFromCwd(process.cwd(), options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 
@@ -408,44 +402,54 @@ export async function runVersionCommand(options: VersionOptions): Promise<void> 
     const currentIos     = await readCurrentIosVersions(projectDir);
 
     intro(pc.bold(pc.cyan("RN Build Helper  ·  Version Update")));
-    console.log(pc.gray(`Project:   ${projectDir}`));
-    console.log(pc.gray(`Platforms: ${platformsToUpdate.join(" + ")}`));
-    console.log("");
+    log(pc.gray(`Project:   ${projectDir}`));
+    log(pc.gray(`Platforms: ${platformsToUpdate.join(" + ")}`));
+    log("");
 
     // ── Version — common across both platforms ────────────────────────────
     const version = options.version
-      ?? String(
-          unwrap(
+      ?? (options.ci
+        ? undefined // In CI, if not provided, we don't change it unless specified
+        : String(
             await text({
-              message: "Version  (applied to all platforms/targets)",
+              message: "Version (applied to all platforms/targets)",
               initialValue: currentAndroid.version ?? "",
               placeholder: "1.5.0"
             })
-          )
-        ).trim();
+          ).trim());
+
+    if (!options.ci && isCancel(version)) return { status: "cancelled" };
 
     // ── Build numbers — separate per platform ─────────────────────────────
     const androidBuildNumber = options.androidBuildNumber
-      ?? String(
-          unwrap(
+      ?? (options.ci
+        ? undefined
+        : String(
             await text({
-              message: "Android build number  (versionCode, integer)",
+              message: "Android build number (versionCode, integer)",
               initialValue: currentAndroid.buildNumber ?? "",
               placeholder: "150"
             })
-          )
-        ).trim();
+          ).trim());
+
+    if (!options.ci && isCancel(androidBuildNumber)) return { status: "cancelled" };
 
     const iosBuildNumber = options.iosBuildNumber
-      ?? String(
-          unwrap(
+      ?? (options.ci
+        ? undefined
+        : String(
             await text({
-              message: "iOS build number  (CURRENT_PROJECT_VERSION, integer)",
+              message: "iOS build number (CURRENT_PROJECT_VERSION, integer)",
               initialValue: currentIos.buildNumber ?? "",
               placeholder: "150"
             })
-          )
-        ).trim();
+          ).trim());
+
+    if (!options.ci && isCancel(iosBuildNumber)) return { status: "cancelled" };
+
+    if (options.ci && !version && !androidBuildNumber && !iosBuildNumber) {
+      throw new Error("Prompt required but running in CI mode: At least one of --version, --android-build-number, or --ios-build-number must be provided.");
+    }
 
     if (!version && !androidBuildNumber && !iosBuildNumber) {
       throw new Error("At least one value must be provided.");
@@ -472,19 +476,17 @@ export async function runVersionCommand(options: VersionOptions): Promise<void> 
         { value: "all",    label: "All Android flavors" },
         { value: "single", label: "Single Android flavor" }
       ];
-      allAndroidFlavors = (unwrap(await select({ message: "Android build number target?", options: scopeOpts })) as string) === "all";
+      allAndroidFlavors = (await select({ message: "Android build number target?", options: scopeOpts }) as string) === "all";
     }
 
     if (androidBuildNumber && platformsToUpdate.includes("android") && androidFlavorConfig && !allAndroidFlavors) {
       const key = options.flavor
         ? options.flavor
-        : (unwrap(
-            await select({
+        : (await select({
               message: "Choose Android flavor for build number",
-              options: androidFlavorConfig.options.map((n) => ({ value: n, label: n })),
+              options: androidFlavorConfig.options.map(n => ({ value: n, label: n })),
               initialValue: androidFlavorConfig.default ?? androidFlavorConfig.options[0]
-            })
-          ) as string);
+            }) as string);
       if (!androidFlavorConfig.options.includes(key)) {
         throw new Error(`Android flavor '${key}' is not configured.`);
       }
@@ -496,26 +498,24 @@ export async function runVersionCommand(options: VersionOptions): Promise<void> 
         { value: "all",    label: "All iOS schemes" },
         { value: "single", label: "Single iOS scheme" }
       ];
-      allIosFlavors = (unwrap(await select({ message: "iOS build number target?", options: scopeOpts })) as string) === "all";
+      allIosFlavors = (await select({ message: "iOS build number target?", options: scopeOpts }) as string) === "all";
     }
 
     if (iosBuildNumber && platformsToUpdate.includes("ios") && iosFlavorConfig && !allIosFlavors) {
       const key = options.flavor
         ? options.flavor
-        : (unwrap(
-            await select({
+        : (await select({
               message: "Choose iOS scheme for build number",
-              options: iosFlavorConfig.options.map((n) => ({ value: n, label: n })),
+              options: iosFlavorConfig.options.map(n => ({ value: n, label: n })),
               initialValue: iosFlavorConfig.default ?? iosFlavorConfig.options[0]
-            })
-          ) as string);
+            }) as string);
       if (!iosFlavorConfig.options.includes(key)) {
         throw new Error(`iOS scheme '${key}' is not configured.`);
       }
       iosFlavorTarget = resolveFlavorValue(iosFlavorConfig.commandMap, key);
     }
 
-    console.log("");
+    log("");
 
     // ── Execute: Android ──────────────────────────────────────────────────
     if (platformsToUpdate.includes("android")) {
@@ -525,11 +525,11 @@ export async function runVersionCommand(options: VersionOptions): Promise<void> 
         );
         if (version) {
           const r = await updateAndroidVersions({ projectDir, version });
-          console.log(pc.green(`Android  versionName (defaultConfig) → ${path.relative(projectDir, r.filePath)}`));
+          log(pc.green(`Android  versionName (defaultConfig) → ${path.relative(projectDir, r.filePath)}`));
         }
         for (const fv of resolvedValues) {
           const r = await updateAndroidVersions({ projectDir, flavorValue: fv, buildNumber: androidBuildNumber });
-          console.log(pc.green(`Android  versionCode (${r.buildTarget}) → ${path.relative(projectDir, r.filePath)}`));
+          log(pc.green(`Android  versionCode (${r.buildTarget}) → ${path.relative(projectDir, r.filePath)}`));
         }
       } else {
         const r = await updateAndroidVersions({
@@ -538,8 +538,8 @@ export async function runVersionCommand(options: VersionOptions): Promise<void> 
           version: version || undefined,
           buildNumber: androidBuildNumber || undefined
         });
-        if (version)             console.log(pc.green(`Android  versionName (defaultConfig) → ${path.relative(projectDir, r.filePath)}`));
-        if (androidBuildNumber)  console.log(pc.green(`Android  versionCode (${r.buildTarget}) → ${path.relative(projectDir, r.filePath)}`));
+        if (version)             log(pc.green(`Android  versionName (defaultConfig) → ${path.relative(projectDir, r.filePath)}`));
+        if (androidBuildNumber)  log(pc.green(`Android  versionCode (${r.buildTarget}) → ${path.relative(projectDir, r.filePath)}`));
       }
     }
 
@@ -551,11 +551,11 @@ export async function runVersionCommand(options: VersionOptions): Promise<void> 
         );
         if (version) {
           const r = await updateIosVersions({ projectDir, version });
-          console.log(pc.green(`iOS  MARKETING_VERSION (all targets) → ${path.relative(projectDir, r.pbxprojPath)}`));
+          log(pc.green(`iOS  MARKETING_VERSION (all targets) → ${path.relative(projectDir, r.pbxprojPath)}`));
         }
         for (const scheme of resolvedSchemes) {
           const r = await updateIosVersions({ projectDir, targetName: scheme, buildNumber: iosBuildNumber });
-          console.log(pc.green(`iOS  CURRENT_PROJECT_VERSION (${r.buildTarget}) → ${path.relative(projectDir, r.pbxprojPath)}`));
+          log(pc.green(`iOS  CURRENT_PROJECT_VERSION (${r.buildTarget}) → ${path.relative(projectDir, r.pbxprojPath)}`));
         }
       } else {
         const r = await updateIosVersions({
@@ -564,23 +564,29 @@ export async function runVersionCommand(options: VersionOptions): Promise<void> 
           version: version || undefined,
           buildNumber: iosBuildNumber || undefined
         });
-        if (version)        console.log(pc.green(`iOS  MARKETING_VERSION (all targets) → ${path.relative(projectDir, r.pbxprojPath)}`));
-        if (iosBuildNumber) console.log(pc.green(`iOS  CURRENT_PROJECT_VERSION (${r.buildTarget}) → ${path.relative(projectDir, r.pbxprojPath)}`));
+        if (version)        log(pc.green(`iOS  MARKETING_VERSION (all targets) → ${path.relative(projectDir, r.pbxprojPath)}`));
+        if (iosBuildNumber) log(pc.green(`iOS  CURRENT_PROJECT_VERSION (${r.buildTarget}) → ${path.relative(projectDir, r.pbxprojPath)}`));
 
-          // ── Execute: package.json ─────────────────────────────────────────────
-          if (version) {
-            const pkgPath = await updatePackageJsonVersion(projectDir, version);
-            console.log(pc.green(`package.json  version → ${path.relative(projectDir, pkgPath)}`));
-          }
-      }
     }
+  }
+
+  if (version) {
+    const pkgPath = await updatePackageJsonVersion(projectDir, version);
+    log(pc.green(`package.json  version → ${path.relative(projectDir, pkgPath)}`));
+  }
+
 
     outro(pc.bold(pc.green("Done.")));
+
+    return {
+      status: "success",
+      projectDir,
+      version,
+      androidBuildNumber,
+      iosBuildNumber,
+      platforms: platformsToUpdate
+    };
   } catch (error) {
-    if (error instanceof Error && error.message === CANCELLED) {
-      outro(pc.yellow("Version update cancelled."));
-      return;
-    }
     throw error;
   }
 }

@@ -1,10 +1,11 @@
 import path from "node:path";
 import fs from "fs-extra";
-import { intro, outro } from "@clack/prompts";
 import pc from "picocolors";
+import { intro, outro, log } from "../utils/logger.js";
 import { createTable } from "../utils/ui.js";
+import type { DoctorSummary } from "../types.js";
 
-export async function runDoctorCommand(cwd?: string): Promise<void> {
+export async function runDoctorCommand(cwd?: string): Promise<DoctorSummary> {
   const projectDir = cwd ? path.resolve(cwd) : process.cwd();
 
   const checks = await Promise.all([
@@ -24,12 +25,43 @@ export async function runDoctorCommand(cwd?: string): Promise<void> {
   table.push(["ios folder", hasIos ? pc.green("OK") : pc.yellow("OPTIONAL")]);
   table.push([".rnbuildrc.yml", hasConfig ? pc.green("OK") : pc.red("MISSING")]);
 
-  console.log(table.toString());
+  log(table.toString());
 
-  if (!hasConfig) {
-    outro(pc.yellow("Run 'rnbuild init' in your React Native project to generate config."));
-    return;
+  const overallSuccess = hasConfig && hasPackageJson && (hasAndroid || hasIos);
+
+  if (!overallSuccess) {
+    const missing = [];
+    if (!hasConfig) missing.push(".rnbuildrc.yml");
+    if (!hasPackageJson) missing.push("package.json");
+    if (!hasAndroid && !hasIos) missing.push("native folders (android/ios)");
+
+    const message = `Doctor checks failed: missing ${missing.join(", ")}`;
+    outro(pc.red(message));
+    if (!hasConfig) {
+      log(pc.yellow("Run 'rnbuild init' in your React Native project to generate config."));
+    }
+
+    return {
+      status: "error",
+      message,
+      checks: {
+        packageJson: hasPackageJson,
+        android: hasAndroid,
+        ios: hasIos,
+        config: hasConfig
+      }
+    };
   }
 
-  outro(pc.green("Doctor checks completed."));
+  outro(pc.green("Doctor checks completed. Project is valid."));
+
+  return {
+    status: "success",
+    checks: {
+      packageJson: hasPackageJson,
+      android: hasAndroid,
+      ios: hasIos,
+      config: hasConfig
+    }
+  };
 }

@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts --ignore-pattern coverage",
     "prepare": "yarn build",
+    "test:ci": "./scripts/run-all-tests.sh",
     "release": "semantic-release --no-ci"
   },
   "keywords": [

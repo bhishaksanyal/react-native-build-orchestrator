@@ -1,5 +1,5 @@
 import path from "node:path";
-import { confirm, intro, isCancel, outro, select, text } from "@clack/prompts";
+import { intro, outro, log, promptSelect as select, promptText as text, promptConfirm as confirm, checkCancel, isCancel } from "../utils/logger.js";
 import pc from "picocolors";
 import fs from "fs-extra";
 import yaml from "js-yaml";
@@ -7,7 +7,7 @@ import { CONFIG_FILE, loadConfig, writeConfig } from "../utils/config.js";
 import { detectEnvironmentsFromDotEnv } from "../utils/environment-detection.js";
 import { readDotEnv } from "../utils/env.js";
 import { syncRuntimeEnvFromConfig } from "../utils/sync-runtime-env.js";
-import type { EnvironmentConfig, RNBuildConfig } from "../types.js";
+import type { EnvironmentConfig, RNBuildConfig, EnvSummary } from "../types.js";
 import { createTable } from "../utils/ui.js";
 
 type EnvAction = "list" | "view" | "add" | "edit" | "remove" | "set-default" | "detect";
@@ -18,7 +18,7 @@ function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) {
     throw new Error(CANCELLED);
   }
-  return value;
+  return value as T;
 }
 
 async function chooseEnv(envNames: string[], message: string, initialValue?: string): Promise<string> {
@@ -82,8 +82,8 @@ async function loadConfigForEnvCommand(cwd: string): Promise<LoadedConfig> {
   }
 }
 
-export async function runEnvCommand(action?: EnvAction, envName?: string): Promise<void> {
-  const cwd = process.cwd();
+export async function runEnvCommand(action?: EnvAction, envName?: string, cwdOverride?: string): Promise<EnvSummary> {
+  const cwd = cwdOverride ? path.resolve(cwdOverride) : process.cwd();
   const config = await loadConfigForEnvCommand(cwd);
 
   try {
@@ -127,10 +127,14 @@ export async function runEnvCommand(action?: EnvAction, envName?: string): Promi
         await handleDetect(cwd, config);
         break;
     }
+    return {
+      status: "success",
+      action: selectedAction
+    };
   } catch (error) {
     if (error instanceof Error && error.message === CANCELLED) {
       outro(pc.yellow("Cancelled."));
-      return;
+      return { status: "cancelled" };
     }
     throw error;
   }
@@ -140,7 +144,7 @@ async function handleList(config: LoadedConfig): Promise<void> {
   const envNames = Object.keys(config.environments);
 
   if (envNames.length === 0) {
-    console.log(pc.yellow("No environments configured. Run 'rnbuild init' to add one."));
+    log(pc.yellow("No environments configured. Run 'rnbuild init' to add one."));
     return;
   }
 
@@ -156,7 +160,7 @@ async function handleList(config: LoadedConfig): Promise<void> {
       String(varCount)
     ]);
   }
-  console.log(table.toString());
+  log(table.toString());
   outro(pc.gray("Use 'rnbuild env set-default <name>' to change default environment."));
 }
 
@@ -164,7 +168,7 @@ async function handleView(cwd: string, config: LoadedConfig, envNameArg?: string
   const envNames = Object.keys(config.environments);
 
   if (envNames.length === 0) {
-    console.log(pc.yellow("No environments configured."));
+    log(pc.yellow("No environments configured."));
     return;
   }
 
@@ -206,7 +210,7 @@ async function handleView(cwd: string, config: LoadedConfig, envNameArg?: string
     table.push([pc.dim("-"), pc.dim("No values configured"), pc.dim("-")]);
   }
 
-  console.log(table.toString());
+  log(table.toString());
   outro(pc.gray("Values shown from .rnbuildrc.yml and linked .env file."));
 }
 
@@ -275,7 +279,7 @@ async function handleEdit(cwd: string, config: LoadedConfig, envNameArg?: string
   const envNames = Object.keys(config.environments);
 
   if (envNames.length === 0) {
-    console.log(pc.yellow("No environments to edit."));
+    log(pc.yellow("No environments to edit."));
     return;
   }
 
@@ -329,7 +333,7 @@ async function handleEdit(cwd: string, config: LoadedConfig, envNameArg?: string
         })
       ) as string;
       delete env.vars[key];
-      console.log(pc.green(`Variable '${key}' deleted.`));
+      log(pc.green(`Variable '${key}' deleted.`));
     } else if (action === "update" && varKeys.length > 0) {
       const key = unwrap(
         await select({
@@ -339,7 +343,7 @@ async function handleEdit(cwd: string, config: LoadedConfig, envNameArg?: string
       ) as string;
       const value = await inputText("New value", env.vars[key]);
       env.vars[key] = value;
-      console.log(pc.green(`Variable '${key}' updated.`));
+      log(pc.green(`Variable '${key}' updated.`));
     } else {
       env.vars = await collectVars(env.vars);
     }
@@ -354,7 +358,7 @@ async function handleRemove(cwd: string, config: LoadedConfig, envNameArg?: stri
   const envNames = Object.keys(config.environments);
 
   if (envNames.length === 0) {
-    console.log(pc.yellow("No environments to remove."));
+    log(pc.yellow("No environments to remove."));
     return;
   }
 
@@ -417,7 +421,7 @@ async function handleDetect(cwd: string, config: LoadedConfig): Promise<void> {
   const names = Object.keys(detected);
 
   if (names.length === 0) {
-    console.log(pc.yellow("No .env files detected in project root."));
+    log(pc.yellow("No .env files detected in project root."));
     return;
   }
 
@@ -432,7 +436,7 @@ async function handleDetect(cwd: string, config: LoadedConfig): Promise<void> {
       config.environments[name] ? pc.yellow("overwrite") : pc.green("new")
     ]);
   }
-  console.log(table.toString());
+  log(table.toString());
 
   const shouldImport = await inputConfirm("Import detected environments into config?", true);
   if (!shouldImport) {

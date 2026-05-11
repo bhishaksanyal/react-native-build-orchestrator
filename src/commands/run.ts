@@ -1,12 +1,12 @@
 import path from "node:path";
-import { confirm, intro, isCancel, outro, select } from "@clack/prompts";
 import pc from "picocolors";
+import { promptConfirm as confirm, promptSelect as select, intro, outro, log, isCancel } from "../utils/logger.js";
 import { execa } from "execa";
 
 import { loadConfig } from "../utils/config.js";
 import { interpolate, readDotEnv } from "../utils/env.js";
 import { createRuntimeVars, writeRuntimeEnvExports } from "../utils/runtime-exports.js";
-import { PLATFORMS, type Platform } from "../types.js";
+import { PLATFORMS, type Platform, type BuildSummary } from "../types.js";
 
 interface RunOptions {
   env?: string;
@@ -15,6 +15,7 @@ interface RunOptions {
   cwd?: string;
   rawLogs?: boolean;
   noPackager?: boolean;
+  ci?: boolean;
 }
 
 class RunCommandError extends Error {
@@ -261,10 +262,10 @@ async function runCommandWithLogs(params: {
         rawLines.push(line);
 
         if (params.rawLogs) {
-          console.log(line);
+          log(line);
         } else {
           const styled = styleRunLine(line, params.platform);
-          if (styled) console.log(styled);
+          if (styled) log(styled);
         }
       }
     }
@@ -273,10 +274,10 @@ async function runCommandWithLogs(params: {
   if (pending.trim()) {
     rawLines.push(pending);
     if (params.rawLogs) {
-      console.log(pending);
+      log(pending);
     } else {
       const styled = styleRunLine(pending, params.platform);
-      if (styled) console.log(styled);
+      if (styled) log(styled);
     }
   }
 
@@ -289,7 +290,7 @@ async function runCommandWithLogs(params: {
   }
 }
 
-export async function runAppCommand(options: RunOptions): Promise<void> {
+export async function runAppCommand(options: RunOptions): Promise<BuildSummary> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
   const config = await loadConfig(projectDir);
 
@@ -305,10 +306,6 @@ export async function runAppCommand(options: RunOptions): Promise<void> {
         options: envNames.map((name) => ({ value: name, label: name })),
         initialValue: config.defaultEnvironment
       }));
-  if (isCancel(selectedEnv)) {
-    outro(pc.yellow("Run cancelled."));
-    return;
-  }
 
   const selectedPlatform = options.platform
     ? asPlatform(options.platform)
@@ -316,10 +313,6 @@ export async function runAppCommand(options: RunOptions): Promise<void> {
         message: "Choose platform",
         options: PLATFORMS.map((value) => ({ value, label: value }))
       }));
-  if (isCancel(selectedPlatform)) {
-    outro(pc.yellow("Run cancelled."));
-    return;
-  }
 
   const platformFlavorConfig = config.flavors?.[selectedPlatform as Platform];
   if (options.flavor && !platformFlavorConfig) {
@@ -335,10 +328,6 @@ export async function runAppCommand(options: RunOptions): Promise<void> {
           initialValue: platformFlavorConfig.default ?? platformFlavorConfig.options[0]
         }))
     : undefined;
-  if (isCancel(selectedFlavor)) {
-    outro(pc.yellow("Run cancelled."));
-    return;
-  }
   if (options.flavor && platformFlavorConfig && !platformFlavorConfig.options.includes(options.flavor)) {
     throw new Error(`Flavor '${options.flavor}' is not configured for ${selectedPlatform}.`);
   }
@@ -358,7 +347,7 @@ export async function runAppCommand(options: RunOptions): Promise<void> {
   const runtimeVars = createRuntimeVars({
     envName: selectedEnv as string,
     buildType: "development",
-    platform: selectedPlatform as Platform,
+    platform: selectedPlatform as unknown as Platform,
     flavor: selectedFlavor as string | undefined,
     envFileVars,
     envConfigVars: envConfig.vars ?? {}
@@ -378,7 +367,7 @@ export async function runAppCommand(options: RunOptions): Promise<void> {
 
   const runCommand = interpolate(
     buildRunCommand({
-      platform: selectedPlatform as Platform,
+      platform: selectedPlatform as unknown as Platform,
       flavorValue: resolvedFlavor || undefined,
       noPackager: options.noPackager
     }),
@@ -386,65 +375,76 @@ export async function runAppCommand(options: RunOptions): Promise<void> {
   );
 
   intro(pc.bold(pc.cyan("RN Build Helper Run")));
-  console.log(pc.gray(`Project: ${projectDir}`));
-  console.log(pc.gray(`Environment: ${selectedEnv}`));
-  console.log(pc.gray(`Platform: ${selectedPlatform}`));
+  log(pc.gray(`Project: ${projectDir}`));
+  log(pc.gray(`Environment: ${selectedEnv}`));
+  log(pc.gray(`Platform: ${selectedPlatform}`));
   if (selectedFlavor) {
-    console.log(pc.gray(`Flavor: ${selectedFlavor}`));
+    log(pc.gray(`Flavor: ${selectedFlavor}`));
   }
-  console.log(pc.gray(`Command: ${runCommand}`));
-  console.log("");
+  log(pc.gray(`Command: ${runCommand}`));
+  log("");
 
-  const shouldRun = await confirm({
-    message: "Run app in debug mode now?",
-    initialValue: true
-  });
-  if (isCancel(shouldRun) || !shouldRun) {
-    outro(pc.yellow("Run cancelled."));
-    return;
+  if (!options.ci) {
+    const shouldRun = await confirm({
+      message: "Run app in debug mode now?",
+      initialValue: true
+    });
+
+    if (isCancel(shouldRun) || !shouldRun) {
+      return { status: "cancelled", message: "Run skipped by user" };
+    }
   }
 
   const runtimeArtifacts = await writeRuntimeEnvExports(projectDir, selectedEnv as string, runtimeVars);
 
-  console.log(pc.bold(pc.cyan(`\n  Starting ${selectedPlatform} debug build…`)));
-  console.log(pc.gray(`  ${runCommand}\n`));
+  log(pc.bold(pc.cyan(`\n  Starting ${selectedPlatform} debug build…`)));
+  log(pc.gray(`  ${runCommand}\n`));
   try {
     await runCommandWithLogs({
       command: runCommand,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
-      platform: selectedPlatform as Platform,
+      platform: selectedPlatform as unknown as Platform,
       env: {
         ...process.env,
         ...mergedVars,
         ENVFILE: runtimeArtifacts.runtimeEnvFilePath
       }
     });
-    console.log("");
-    console.log(pc.green("  ✓ Debug run completed."));
-    console.log(pc.gray(`  ENVFILE: ${runtimeArtifacts.runtimeEnvFilePath}`));
-    console.log(pc.gray(`  Config:  ${runtimeArtifacts.runtimeWrapperPath}`));
+    log("");
+    log(pc.green("  ✓ Debug run completed."));
+    log(pc.gray(`  ENVFILE: ${runtimeArtifacts.runtimeEnvFilePath}`));
+    log(pc.gray(`  Config:  ${runtimeArtifacts.runtimeWrapperPath}`));
     if (runtimeArtifacts.androidJsonPath) {
-      console.log(pc.gray(`  Android native JSON: ${runtimeArtifacts.androidJsonPath}`));
+      log(pc.gray(`  Android native JSON: ${runtimeArtifacts.androidJsonPath}`));
     }
     if (runtimeArtifacts.androidXmlPath) {
-      console.log(pc.gray(`  Android native XML: ${runtimeArtifacts.androidXmlPath}`));
+      log(pc.gray(`  Android native XML: ${runtimeArtifacts.androidXmlPath}`));
     }
     if (runtimeArtifacts.iosInfoPlistPaths.length > 0) {
-      console.log(pc.gray(`  iOS Info.plist updated: ${runtimeArtifacts.iosInfoPlistPaths.length} file(s)`));
+      log(pc.gray(`  iOS Info.plist updated: ${runtimeArtifacts.iosInfoPlistPaths.length} file(s)`));
     }
   } catch (error) {
-    console.log("");
-    console.log(pc.red("  ✗ Debug run failed."));
+    log("");
+    log(pc.red("  ✗ Debug run failed."));
     if (error instanceof RunCommandError && error.hints.length > 0) {
-      console.log("");
-      console.log(pc.bold(pc.yellow("  Likely cause")));
+      log("");
+      log(pc.bold(pc.yellow("  Likely cause")));
       for (const hint of error.hints) {
-        console.log(pc.yellow(`  - ${hint}`));
+        log(pc.yellow(`  - ${hint}`));
       }
     }
     throw error;
   }
 
   outro(pc.bold(pc.green("Done.")));
+
+  return {
+    status: "success",
+    projectDir,
+    environment: selectedEnv as string,
+    platform: selectedPlatform as Platform,
+    flavor: selectedFlavor as string,
+    command: runCommand
+  };
 }
