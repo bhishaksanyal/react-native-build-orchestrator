@@ -1,7 +1,7 @@
 #!/bin/bash
 source scripts/tests/common.sh
 
-echo -e "\n🔢 [Suite] Version Tests"
+echo -e "\n${BLUE}🔢 [Suite] Version Tests${NC}"
 
 echo "Testing 'version --ci' validation (missing version)..."
 set +e

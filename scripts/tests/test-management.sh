@@ -1,7 +1,7 @@
 #!/bin/bash
 source scripts/tests/common.sh
 
-echo -e "\n🛠️ [Suite] Management Commands Tests (env, flavor, fastlane)"
+echo -e "\n${BLUE}🛠️ [Suite] Management Commands Tests (env, flavor, fastlane)${NC}"
 
 setup_workspace
 

@@ -8,7 +8,7 @@ cleanup_workspace
 setup_workspace
 
 # --- Test Suite 1: Config & Health ---
-echo -e "\n📂 [Suite 1] Config & Health"
+echo -e "\n${BLUE}📂 [Suite 1] Config & Health${NC}"
 
 echo "Running 'doctor --ci' without config..."
 set +e
@@ -39,7 +39,7 @@ run_cmd doctor --ci > stdout.txt 2> stderr.txt
 assert_json_status "success" stdout.txt
 
 # --- Test Suite 2: Parameter Validation ---
-echo -e "\n🧪 [Suite 2] Parameter Validation"
+echo -e "\n${BLUE}🧪 [Suite 2] Parameter Validation${NC}"
 
 echo "Testing 'build --ci' with invalid environment..."
 set +e
@@ -62,7 +62,7 @@ if ! grep -q "Android build number must be a positive integer" stdout.txt; then
 fi
 
 # --- Test Suite 3: Partial Inputs & Prompts ---
-echo -e "\n❓ [Suite 3] Partial Inputs & Prompt Detection"
+echo -e "\n${BLUE}❓ [Suite 3] Partial Inputs & Prompt Detection${NC}"
 
 echo "Testing 'release --ci' with missing mandatory flags..."
 set +e
@@ -77,7 +77,7 @@ if ! grep -q "Prompt required but running in CI mode" stdout.txt; then
 fi
 
 # --- Test Suite 4: Dry Runs & Auto-Confirmation ---
-echo -e "\n🏃 [Suite 4] Dry Runs & Auto-Confirmation"
+echo -e "\n${BLUE}🏃 [Suite 4] Dry Runs & Auto-Confirmation${NC}"
 
 echo "Testing 'build --ci --dry-run'..."
 run_cmd build --ci --env development --platform android --type development --dry-run > stdout.txt 2> stderr.txt
@@ -85,7 +85,7 @@ assert_json_status "success" stdout.txt
 assert_stderr_contains "Dry run complete" stderr.txt
 
 # --- Test Suite 5: Global Flag Clashes ---
-echo -e "\n⚔️  [Suite 5] Global Flag Clashes"
+echo -e "\n${BLUE}⚔️  [Suite 5] Global Flag Clashes${NC}"
 
 echo "Testing 'version --ci --version' (Subcommand vs Global)..."
 PKG_VERSION=$(node -p "require('./package.json').version")

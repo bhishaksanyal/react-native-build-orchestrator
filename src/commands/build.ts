@@ -396,7 +396,7 @@ export async function runBuildCommand(options: BuildOptions): Promise<BuildSumma
 
   const selectedEnv = options.env
     ? options.env
-    : (await select({
+    : (await select<string>({
         message: "Choose environment",
         options: envNames.map((name) => ({ value: name, label: name })),
         initialValue: config.defaultEnvironment
@@ -404,26 +404,26 @@ export async function runBuildCommand(options: BuildOptions): Promise<BuildSumma
 
   const selectedType = options.type
     ? asBuildType(options.type)
-    : (await select({
+    : (await select<BuildType>({
         message: "Choose build type",
         options: BUILD_TYPES.map((value) => ({ value, label: value }))
       }));
 
   const selectedPlatform = options.platform
     ? asPlatform(options.platform)
-    : (await select({
+    : (await select<Platform>({
         message: "Choose platform",
         options: PLATFORMS.map((value) => ({ value, label: value }))
       }));
 
-  const platformFlavorConfig = config.flavors?.[selectedPlatform as Platform];
+  const platformFlavorConfig = config.flavors?.[selectedPlatform];
   if (options.flavor && !platformFlavorConfig) {
     throw new Error(`No flavors configured for ${selectedPlatform}.`);
   }
   const selectedFlavor = platformFlavorConfig
     ? options.flavor
       ? options.flavor
-      : (await select({
+      : (await select<string>({
           message: `Choose ${selectedPlatform} flavor`,
           options: platformFlavorConfig.options.map((name) => ({ value: name, label: name })),
           initialValue: platformFlavorConfig.default ?? platformFlavorConfig.options[0]
@@ -461,25 +461,24 @@ export async function runBuildCommand(options: BuildOptions): Promise<BuildSumma
     } else if (selectedType === "development") {
       selectedAndroidArtifact = "apk";
     } else {
-      const artifactInput = await select({
+      selectedAndroidArtifact = (await select<AndroidArtifact>({
         message: "Choose Android artifact",
         options: [
           { value: "apk", label: "apk" },
           { value: "bundle", label: "bundle (aab)" }
         ],
         initialValue: selectedType === "store" ? "bundle" : "apk"
-      });
-      selectedAndroidArtifact = artifactInput as AndroidArtifact;
+      }));
     }
   }
 
   const envFilePath = envConfig.envFile ? path.resolve(projectDir, envConfig.envFile) : "";
   const envFileVars = envConfig.envFile ? await readDotEnv(envFilePath) : {};
   const runtimeVars = createRuntimeVars({
-    envName: selectedEnv as string,
-    buildType: selectedType as unknown as BuildType,
-    platform: selectedPlatform as unknown as Platform,
-    flavor: selectedFlavor as string | undefined,
+    envName: selectedEnv,
+    buildType: selectedType,
+    platform: selectedPlatform,
+    flavor: selectedFlavor,
     envFileVars,
     envConfigVars: envConfig.vars ?? {}
   });

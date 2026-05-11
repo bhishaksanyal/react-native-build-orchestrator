@@ -1,7 +1,7 @@
 #!/bin/bash
 source scripts/tests/common.sh
 
-echo -e "\n📂 [Suite] Init & Doctor Tests"
+echo -e "\n${BLUE}📂 [Suite] Init & Doctor Tests${NC}"
 
 cleanup_workspace
 setup_workspace

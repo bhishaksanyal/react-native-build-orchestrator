@@ -1,7 +1,7 @@
 #!/bin/bash
 source scripts/tests/common.sh
 
-echo -e "\n🛠️ [Suite] Build & Run Tests"
+echo -e "\n${BLUE}🛠️ [Suite] Build & Run Tests${NC}"
 
 # Ensure config exists
 if [ ! -f .rnbuildrc.yml ]; then

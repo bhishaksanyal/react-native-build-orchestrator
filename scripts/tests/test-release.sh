@@ -1,7 +1,7 @@
 #!/bin/bash
 source scripts/tests/common.sh
 
-echo -e "\n🚀 [Suite] Release Tests"
+echo -e "\n${BLUE}🚀 [Suite] Release Tests${NC}"
 
 echo "Testing 'release --ci' prompt detection..."
 set +e
