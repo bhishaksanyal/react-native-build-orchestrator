@@ -259,9 +259,11 @@ Supported placeholders in build commands and output hints:
 - `{{FLAVOR_TASK}}`
 - Any key from selected env file or env vars
 
-## CI Usage
+## CI Usage & Structured JSON Output
 
-Typical non-interactive usage:
+The `--ci` flag can be added to most commands to run them in a non-interactive mode. In this mode, prompts are disabled (missing required arguments will throw an error), standard informational logs are redirected to `stderr`, and a single, structured JSON object is output to `stdout` upon completion. This is ideal for CI/CD pipelines to parse outputs programmatically.
+
+Example non-interactive release:
 
 ```bash
 yarn rnbuild release \
@@ -272,6 +274,32 @@ yarn rnbuild release \
   --lane upload_store \
   --track internal \
   --ci
+```
+
+Example JSON output structure (from `stdout`):
+```json
+{
+  "status": "success",
+  "projectDir": "/path/to/project",
+  "environment": "production",
+  "platform": "android",
+  "flavor": "",
+  "buildType": "store",
+  "upload": {
+    "lane": "upload_store",
+    "track": "internal",
+    "artifactPath": "/path/to/project/android/app/build/outputs/bundle/release/app-release.aab"
+  }
+}
+```
+
+If an error occurs in CI mode, the tool will exit with a non-zero status code and output a JSON error object to `stdout`:
+```json
+{
+  "status": "error",
+  "command": "release",
+  "message": "Artifact path is required for upload."
+}
 ```
 
 For reproducible Fastlane runs in CI, use Bundler and prefer `bundle exec fastlane`.
@@ -303,8 +331,8 @@ The following items are intentionally kept as future work so maintainers and ope
 
 ### Phase 1: CI and automation
 
-- CI mode with structured JSON output (`--ci`, machine-readable summaries)
-- Non-interactive validation mode for pipelines (`rnbuild doctor --ci`)
+- ~~CI mode with structured JSON output (`--ci`, machine-readable summaries)~~
+- ~~Non-interactive validation mode for pipelines (`rnbuild doctor --ci`)~~
 - ~~GitHub Actions examples for Android AAB and iOS IPA releases~~
 - Better exit-code mapping for build vs upload failures
 

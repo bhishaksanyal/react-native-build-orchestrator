@@ -1,3 +1,20 @@
+## [1.4.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.3.1...v1.4.0) (2026-05-11)
+
+### ✨ Features
+
+* implement CI mode with structured JSON output ([dd108cb](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/dd108cb1c87f890e59cf1dbd31d5433158ee1ca8))
+
+### 🐛 Bug Fixes
+
+* ignore generated files in eslint config ([5836fe7](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/5836fe71d5d7ecdcc389fa40c5a82340844bcf48))
+* improve type safety and synchronize package.json versioning ([69dad61](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/69dad61d61e3c57773a381d97f5448be2986e552))
+
+## [1.3.1](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.3.0...v1.3.1) (2026-05-09)
+
+### 🐛 Bug Fixes
+
+* CI issue ([65aead1](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/65aead143f06f893a8227808c2c537e52fdbc138))
+
 ## [1.3.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.2.1...v1.3.0) (2026-05-09)
 
 ### ✨ Features

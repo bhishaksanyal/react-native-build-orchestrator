@@ -66,12 +66,12 @@ jobs:
         with:
           semantic_version: 24
           extra_plugins: |
-            @semantic-release/commit-analyzer@f106b763d5a1057a18e3457c11d521976d770506
-            @semantic-release/release-notes-generator@9728887caf9d7ca03e6861b019785539cbb7857e
-            @semantic-release/changelog@47045b310f0550fa4ce278bbfba36e2e155946e2
-            @semantic-release/npm@daec492f715f00a6ce61ed1e942d93c735c8fba8
-            @semantic-release/git@3e934d45f97fd07a63617c0fc098c9ed3e67d97a
-            @semantic-release/github@edd165252bc8ee96de37940f4730fd43f0e67a0f
+            @semantic-release/commit-analyzer@13
+            @semantic-release/release-notes-generator@14
+            @semantic-release/changelog@6
+            @semantic-release/npm@13
+            @semantic-release/git@10
+            @semantic-release/github@12
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

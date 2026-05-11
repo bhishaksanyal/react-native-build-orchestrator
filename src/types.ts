@@ -60,3 +60,74 @@ export interface RNBuildConfig {
   fastlane?: FastlaneConfig;
   builds: Record<BuildType, BuildProfile>;
 }
+
+export interface CommandResult {
+  status: "success" | "error" | "cancelled";
+  message?: string;
+}
+
+export interface BuildSummary extends CommandResult {
+  projectDir?: string;
+  environment?: string;
+  buildType?: BuildType;
+  platform?: Platform;
+  flavor?: string;
+  command?: string;
+  logPath?: string;
+  dryRun?: boolean;
+  expectedArtifact?: string;
+}
+
+export interface ReleaseSummary extends CommandResult {
+  projectDir?: string;
+  environment?: string;
+  platform?: Platform;
+  flavor?: string;
+  buildType?: BuildType;
+  upload?: {
+    lane?: string;
+    track?: string;
+    artifactPath?: string;
+  };
+  dryRun?: boolean;
+}
+
+export interface DoctorSummary extends CommandResult {
+  checks?: {
+    packageJson: boolean;
+    android: boolean;
+    ios: boolean;
+    config: boolean;
+  };
+}
+
+export interface VersionSummary extends CommandResult {
+  projectDir?: string;
+  version?: string;
+  androidBuildNumber?: string;
+  iosBuildNumber?: string;
+  platforms?: string[];
+}
+
+export interface InitSummary extends CommandResult {
+  projectName?: string;
+  configPath?: string;
+  environments?: string[];
+  platforms?: string[];
+}
+
+export interface EnvSummary extends CommandResult {
+  action?: string;
+  envName?: string;
+}
+
+export interface FlavorSummary extends CommandResult {
+  action?: string;
+  platform?: string;
+  flavor?: string;
+}
+
+export interface FastlaneSummary extends CommandResult {
+  fastlaneDir?: string;
+  filesOverwritten?: boolean;
+}
