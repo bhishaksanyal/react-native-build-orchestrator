@@ -39,9 +39,9 @@ describe("fastlane command", () => {
   it("sets up fastlane files", async () => {
     loadConfig.mockResolvedValue({
         projectName: "MyApp",
-        release: {
-            android: { lane: "upload", track: "internal" },
-            ios: { lane: "upload", track: "testflight" }
+        fastlane: {
+            android: { lane: "upload", defaultTrack: "internal" },
+            ios: { lane: "upload", defaultTrack: "testflight" }
         }
     });
     await runFastlaneSetupCommand({ force: false });
@@ -51,9 +51,9 @@ describe("fastlane command", () => {
   it("handles existing files with force", async () => {
       loadConfig.mockResolvedValue({
           projectName: "MyApp",
-          release: {
-              android: { lane: "upload", track: "internal" },
-              ios: { lane: "upload", track: "testflight" }
+          fastlane: {
+              android: { lane: "upload", defaultTrack: "internal" },
+              ios: { lane: "upload", defaultTrack: "testflight" }
           }
       });
       fs.pathExists.mockResolvedValue(true);
@@ -64,9 +64,9 @@ describe("fastlane command", () => {
   it("handles cancel", async () => {
       loadConfig.mockResolvedValue({
           projectName: "MyApp",
-          release: {
-              android: { lane: "upload", track: "internal" },
-              ios: { lane: "upload", track: "testflight" }
+          fastlane: {
+              android: { lane: "upload", defaultTrack: "internal" },
+              ios: { lane: "upload", defaultTrack: "testflight" }
           }
       });
       confirm.mockResolvedValue("__CANCEL__");
@@ -74,8 +74,9 @@ describe("fastlane command", () => {
       expect(fs.writeFile).not.toHaveBeenCalled();
   });
 
-  it("skips when release is not configured", async () => {
+  it("skips when user declines all platforms", async () => {
       loadConfig.mockResolvedValue({ projectName: "MyApp" });
+      confirm.mockResolvedValue(false);
       await runFastlaneSetupCommand({ force: false });
       expect(fs.writeFile).not.toHaveBeenCalled();
   });

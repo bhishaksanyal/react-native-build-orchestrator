@@ -15,7 +15,13 @@ const fs = (await import("fs-extra")).default as any;
 describe("config utility", () => {
   const MOCK_CONFIG = {
     projectName: "Test",
-    environments: { dev: { vars: {} } }
+    defaultEnvironment: "dev",
+    environments: { dev: { vars: {} } },
+    builds: {
+      development: { android: { enabled: true, command: "build" } },
+      adhoc: { android: { enabled: true, command: "build" } },
+      store: { android: { enabled: true, command: "build" } }
+    }
   };
 
   it("loads config if it exists", async () => {

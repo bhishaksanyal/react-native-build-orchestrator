@@ -6,9 +6,19 @@ jest.unstable_mockModule("fs-extra", () => ({
     readFile: (p: string) => {
         if (p.endsWith(".gradle")) return Promise.resolve('defaultConfig {\nversionName "1.0.0"\nversionCode 1\n}\nproductFlavors {\ndevFlavor {\nversionName "1.0.0"\nversionCode 1\n}\n}');
         if (p.endsWith(".pbxproj")) return Promise.resolve(
-            'App = { buildConfigurationList = ABC; };\n' +
-            'ABC = { buildConfigurations = ( DEF ); };\n' +
-            'DEF = { buildSettings = { MARKETING_VERSION = 1.0.0; CURRENT_PROJECT_VERSION = 1; }; };'
+            '000000000000000000000ABC /* Build configuration list for PBXNativeTarget "App" */ = {\n' +
+            '  isa = XCConfigurationList;\n' +
+            '  buildConfigurations = (\n' +
+            '    000000000000000000000DEF /* Debug */,\n' +
+            '  );\n' +
+            '};\n' +
+            '000000000000000000000DEF /* Debug */ = {\n' +
+            '  isa = XCBuildConfiguration;\n' +
+            '  buildSettings = {\n' +
+            '    MARKETING_VERSION = 1.0.0;\n' +
+            '    CURRENT_PROJECT_VERSION = 1;\n' +
+            '  };\n' +
+            '};'
         );
         if (p.endsWith("package.json")) return Promise.resolve('{"version": "1.0.0"}');
         return Promise.resolve("");
