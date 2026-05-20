@@ -137,4 +137,162 @@ describe("build command", () => {
       } as any);
       await runBuildCommand({ platform: "ios", type: "store", env: "prod" });
   });
+
+  describe("build command edge cases", () => {
+    let originalPlatform: string;
+
+    beforeAll(() => {
+      originalPlatform = process.platform;
+    });
+
+    afterEach(() => {
+      Object.defineProperty(process, "platform", {
+        value: originalPlatform,
+        configurable: true
+      });
+    });
+
+    it("throws if no environments configured", async () => {
+      loadConfig.mockResolvedValueOnce({
+        ...MOCK_CONFIG,
+        environments: {}
+      });
+      await expect(runBuildCommand({ platform: "android", type: "store", env: "prod" })).rejects.toThrow("No environments configured");
+    });
+
+    it("throws if defaultEnvironment is missing", async () => {
+      loadConfig.mockResolvedValueOnce({
+        ...MOCK_CONFIG,
+        defaultEnvironment: ""
+      });
+      await expect(runBuildCommand({ platform: "android", type: "store", env: "prod" })).rejects.toThrow("defaultEnvironment is missing");
+    });
+
+    it("throws if defaultEnvironment is not configured", async () => {
+      loadConfig.mockResolvedValueOnce({
+        ...MOCK_CONFIG,
+        defaultEnvironment: "invalid"
+      });
+      await expect(runBuildCommand({ platform: "android", type: "store", env: "prod" })).rejects.toThrow("is not configured in environments");
+    });
+
+    it("throws on invalid android artifact", async () => {
+      await expect(runBuildCommand({ platform: "android", type: "store", env: "prod", androidArtifact: "invalid" })).rejects.toThrow("Invalid Android artifact");
+    });
+
+    it("throws on invalid build type", async () => {
+      await expect(runBuildCommand({ platform: "android", type: "invalid", env: "prod" })).rejects.toThrow("Invalid build type");
+    });
+
+    it("throws on invalid platform", async () => {
+      await expect(runBuildCommand({ platform: "invalid", type: "store", env: "prod" })).rejects.toThrow("Invalid platform");
+    });
+
+    it("throws if flavor passed but no flavors configured", async () => {
+      const configNoFlavors = { ...MOCK_CONFIG };
+      delete (configNoFlavors as any).flavors;
+      loadConfig.mockResolvedValueOnce(configNoFlavors);
+      await expect(runBuildCommand({ platform: "android", type: "store", env: "prod", flavor: "free" })).rejects.toThrow("No flavors configured");
+    });
+
+    it("throws if flavor is not configured", async () => {
+      await expect(runBuildCommand({ platform: "android", type: "store", env: "prod", flavor: "invalid" })).rejects.toThrow("is not configured");
+    });
+
+    it("throws if build target is not enabled", async () => {
+      const configDisabled = JSON.parse(JSON.stringify(MOCK_CONFIG));
+      configDisabled.builds.store.android.enabled = false;
+      loadConfig.mockResolvedValueOnce(configDisabled);
+      await expect(runBuildCommand({ platform: "android", type: "store", env: "prod" })).rejects.toThrow("Build target not enabled");
+    });
+
+    it("handles dryRun", async () => {
+      const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", dryRun: true });
+      expect(res.dryRun).toBe(true);
+    });
+
+    it("handles non-CI user skip", async () => {
+      confirm.mockResolvedValueOnce(false);
+      const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: false });
+      expect(res.status).toBe("cancelled");
+    });
+
+    it("handles build failure and throws", async () => {
+      execa.mockReturnValueOnce({
+        all: (async function* () { yield "error: fail\n"; })(),
+        exitCode: 1
+      } as any);
+      await expect(runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true })).rejects.toThrow("Build command failed");
+    });
+
+    it("covers resolveOutputFolder when parent exists but child does not", async () => {
+      fs.pathExists.mockImplementation(async (p: string) => {
+        if (p.endsWith("parent_dir") || p.includes("logs")) return true;
+        return false;
+      });
+      fs.stat.mockResolvedValueOnce({ isDirectory: () => false } as any);
+      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+    });
+
+    it("covers resolveOutputFolder when path is file", async () => {
+      const configWithPath = JSON.parse(JSON.stringify(MOCK_CONFIG));
+      configWithPath.builds.store.android.outputHint = "./hint.apk";
+      loadConfig.mockResolvedValue(configWithPath);
+
+      fs.pathExists.mockResolvedValue(true);
+      fs.stat.mockResolvedValue({ isDirectory: () => false } as any);
+
+      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+    });
+
+    it("covers openFolder for different platforms", async () => {
+      const configWithPath = JSON.parse(JSON.stringify(MOCK_CONFIG));
+      configWithPath.builds.store.android.outputHint = "./hint.apk";
+      loadConfig.mockResolvedValue(configWithPath);
+
+      fs.pathExists.mockResolvedValue(true);
+      fs.stat.mockResolvedValue({ isDirectory: () => true } as any);
+
+      // darwin
+      Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
+      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+      expect(execa).toHaveBeenCalledWith("open", expect.any(Array));
+
+      // win32
+      Object.defineProperty(process, "platform", { value: "win32", configurable: true });
+      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+      expect(execa).toHaveBeenCalledWith("explorer", expect.any(Array));
+
+      // linux
+      Object.defineProperty(process, "platform", { value: "linux", configurable: true });
+      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+      expect(execa).toHaveBeenCalledWith("xdg-open", expect.any(Array));
+    });
+
+    it("covers fast mode flags", async () => {
+      // Android parallel build flags
+      const configAndroidGradle = JSON.parse(JSON.stringify(MOCK_CONFIG));
+      configAndroidGradle.builds.store.android.command = "./gradlew assembleDebug";
+      loadConfig.mockResolvedValueOnce(configAndroidGradle);
+      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, fast: true });
+
+      // iOS xcodebuild flags
+      const configIosXcode = JSON.parse(JSON.stringify(MOCK_CONFIG));
+      configIosXcode.builds.store.ios.command = "xcodebuild build";
+      loadConfig.mockResolvedValueOnce(configIosXcode);
+      await runBuildCommand({ platform: "ios", type: "store", env: "prod", ci: true, fast: true });
+    });
+
+    it("covers template bypass in commands", async () => {
+      const configBypass = JSON.parse(JSON.stringify(MOCK_CONFIG));
+      configBypass.builds.store.android.command = "gradlew assembleDebug {{ANDROID_ARTIFACT}} {{FLAVOR}}";
+      configBypass.builds.store.ios.command = "xcodebuild -scheme {{FLAVOR}}";
+      loadConfig.mockResolvedValueOnce(configBypass);
+      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, flavor: "free" });
+    });
+
+    it("covers rawLogs enabled", async () => {
+      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, rawLogs: true });
+    });
+  });
 });

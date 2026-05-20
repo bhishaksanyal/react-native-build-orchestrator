@@ -10,6 +10,7 @@ jest.unstable_mockModule("fs-extra", () => ({
 }));
 
 const { loadConfig, writeConfig } = await import("../../utils/config.js");
+const { parseConfig } = await import("../../schema.js");
 const fs = (await import("fs-extra")).default as any;
 
 describe("config utility", () => {
@@ -39,5 +40,44 @@ describe("config utility", () => {
   it("writes config", async () => {
       await writeConfig("/app", MOCK_CONFIG as any);
       expect(fs.writeFile).toHaveBeenCalled();
+  });
+
+  describe("schema validation", () => {
+    it("throws when defaultEnvironment is not in environments", () => {
+      const invalidConfig = {
+        ...MOCK_CONFIG,
+        defaultEnvironment: "missing"
+      };
+      expect(() => parseConfig(invalidConfig)).toThrow(/defaultEnvironment must match/);
+    });
+
+    it("throws when flavor default is not in options", () => {
+      const invalidConfig = {
+        ...MOCK_CONFIG,
+        flavors: {
+          android: {
+            options: ["dev"],
+            default: "prod"
+          }
+        }
+      };
+      expect(() => parseConfig(invalidConfig)).toThrow(/default android flavor must match/);
+    });
+
+    it("throws when flavor commandMap key is not in options", () => {
+      const invalidConfig = {
+        ...MOCK_CONFIG,
+        flavors: {
+          android: {
+            options: ["dev"],
+            default: "dev",
+            commandMap: {
+              prod: "prodFlavor"
+            }
+          }
+        }
+      };
+      expect(() => parseConfig(invalidConfig)).toThrow(/mapped android flavor must exist/);
+    });
   });
 });

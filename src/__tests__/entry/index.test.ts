@@ -142,4 +142,51 @@ describe("CLI entry point", () => {
 
       errorSpy.mockRestore();
   });
+
+  it("covers CI mode and cancellation flows in index.ts", async () => {
+      const { runInitCommand } = await import("../../commands/init.js") as any;
+      const { setCiMode } = await import("../../utils/logger.js") as any;
+      const stdoutSpy = jest.spyOn(process.stdout, "write").mockImplementation(() => true);
+      const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+      await import(`../../index.js?t=ci&v=${Date.now()}`);
+
+      const initCmd = registeredCommands.find(c => c._name === "init");
+
+      // 1. Success result in CI mode
+      runInitCommand.mockResolvedValueOnce({ status: "success" });
+      await initCmd._actionHandler({ ci: true });
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining("success"));
+
+      // 2. Error result in CI mode sets process.exitCode = 1
+      runInitCommand.mockResolvedValueOnce({ status: "error" });
+      process.exitCode = 0;
+      await initCmd._actionHandler({ ci: true });
+      expect(process.exitCode).toBe(1);
+
+      // 3. Exception in CI mode
+      runInitCommand.mockRejectedValueOnce(new Error("CI exception"));
+      await initCmd._actionHandler({ ci: true });
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining("CI exception"));
+
+      // 4. Cancellation in non-CI mode
+      runInitCommand.mockRejectedValueOnce(new Error("Operation cancelled"));
+      setCiMode(false);
+      process.exitCode = -1;
+      await initCmd._actionHandler({});
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Operation cancelled"));
+      expect(process.exitCode).toBe(0);
+
+      // 5. Cancellation in CI mode
+      runInitCommand.mockRejectedValueOnce(new Error("Operation cancelled"));
+      setCiMode(true);
+      logSpy.mockClear();
+      process.exitCode = -1;
+      await initCmd._actionHandler({ ci: true });
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(0);
+
+      stdoutSpy.mockRestore();
+      logSpy.mockRestore();
+  });
 });

@@ -3,13 +3,16 @@ import { jest } from "@jest/globals";
 
 jest.unstable_mockModule("fs-extra", () => ({
   default: {
-    pathExists: jest.fn()
+    pathExists: jest.fn<any>()
   }
 }));
-jest.unstable_mockModule("@clack/prompts", () => ({
+
+jest.unstable_mockModule("../../utils/logger.js", () => ({
   intro: jest.fn(),
   outro: jest.fn(),
-  note: jest.fn()
+  log: jest.fn(),
+  setCiMode: jest.fn(),
+  getCiMode: jest.fn()
 }));
 
 const { runDoctorCommand } = await import("../../commands/doctor.js");
@@ -20,13 +23,46 @@ describe("doctor command", () => {
     jest.clearAllMocks();
   });
 
-  it("passes when all files exist", async () => {
+  it("reports success when all files exist", async () => {
     fs.pathExists.mockResolvedValue(true);
-    await runDoctorCommand();
+    const result = await runDoctorCommand();
+    expect(result.status).toBe("success");
+    expect(result.checks!.packageJson).toBe(true);
   });
 
-  it("fails gracefully when files are missing", async () => {
-      fs.pathExists.mockResolvedValue(false);
-      await runDoctorCommand("/some/path");
+  it("reports error when config is missing", async () => {
+    fs.pathExists.mockImplementation((p: string) => {
+        if (p.endsWith(".rnbuildrc.yml")) return Promise.resolve(false);
+        return Promise.resolve(true);
+    });
+    const result = await runDoctorCommand();
+    expect(result.status).toBe("error");
+    expect(result.message).toContain(".rnbuildrc.yml");
+  });
+
+  it("reports error when package.json is missing", async () => {
+    fs.pathExists.mockImplementation((p: string) => {
+        if (p.endsWith("package.json")) return Promise.resolve(false);
+        return Promise.resolve(true);
+    });
+    const result = await runDoctorCommand();
+    expect(result.status).toBe("error");
+    expect(result.message).toContain("package.json");
+  });
+
+  it("reports error when both android and ios folders are missing", async () => {
+    fs.pathExists.mockImplementation((p: string) => {
+        if (p.endsWith("android") || p.endsWith("ios")) return Promise.resolve(false);
+        return Promise.resolve(true);
+    });
+    const result = await runDoctorCommand();
+    expect(result.status).toBe("error");
+    expect(result.message).toContain("native folders");
+  });
+
+  it("handles custom cwd", async () => {
+      fs.pathExists.mockResolvedValue(true);
+      await runDoctorCommand("/tmp/test");
+      expect(fs.pathExists).toHaveBeenCalledWith(expect.stringContaining("/tmp/test"));
   });
 });

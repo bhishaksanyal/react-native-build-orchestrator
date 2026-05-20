@@ -10,12 +10,9 @@ import { createTable } from "../utils/ui.js";
 type FlavorAction = "list" | "add" | "edit" | "remove" | "set-default" | "detect";
 type LoadedConfig = Awaited<ReturnType<typeof loadConfig>>;
 
-const CANCELLED = "cancelled-by-user";
+const CANCELLED = "Operation cancelled";
 
-function unwrap<T>(value: T | symbol): T {
-  if (isCancel(value)) {
-    throw new Error(CANCELLED);
-  }
+function unwrap<T>(value: T): T {
   return value;
 }
 

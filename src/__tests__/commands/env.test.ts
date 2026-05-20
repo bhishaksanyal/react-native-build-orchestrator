@@ -43,8 +43,9 @@ describe("env command", () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     loadConfig.mockImplementation(() => Promise.resolve(MOCK_CONFIG()));
+    writeConfig.mockResolvedValue("path");
     isCancel.mockImplementation((v: any) => v === "__CANCEL__");
     fs.pathExists.mockResolvedValue(true);
     fs.readFile.mockResolvedValue("KEY=VAL");
@@ -52,17 +53,19 @@ describe("env command", () => {
     fs.readdir.mockResolvedValue([]);
     fs.stat.mockResolvedValue({ isDirectory: () => true });
 
-    select.mockResolvedValue("__CANCEL__");
-    confirm.mockResolvedValue(false);
-    text.mockResolvedValue("__CANCEL__");
+    select.mockImplementation((options: any) => Promise.resolve(options.initialValue || options.options[0].value));
+    confirm.mockResolvedValue(true);
+    text.mockImplementation((options: any) => Promise.resolve(options.defaultValue || ""));
   });
 
   it("lists environments", async () => {
-    await runEnvCommand("list");
+    const res = await runEnvCommand("list");
+    expect(res.status).toBe("success");
   });
 
   it("views an environment", async () => {
-      await runEnvCommand("view", "dev");
+      const res = await runEnvCommand("view", "dev");
+      expect(res.status).toBe("success");
   });
 
   it("adds a new environment", async () => {
@@ -70,14 +73,18 @@ describe("env command", () => {
           .mockResolvedValueOnce(".env.new")
           .mockResolvedValueOnce("BASE_URL")
           .mockResolvedValueOnce("http://localhost");
-      confirm.mockResolvedValueOnce(false);
-      await runEnvCommand("add");
+      confirm.mockResolvedValueOnce(true) // Link env file
+             .mockResolvedValueOnce(true) // Add or update var
+             .mockResolvedValueOnce(false); // Add another var
+      const res = await runEnvCommand("add");
+      expect(res.status).toBe("success");
       expect(writeConfig).toHaveBeenCalled();
   });
 
   it("removes an environment", async () => {
       confirm.mockResolvedValueOnce(true);
-      await runEnvCommand("remove", "prod");
+      const res = await runEnvCommand("remove", "prod");
+      expect(res.status).toBe("success");
       expect(writeConfig).toHaveBeenCalled();
   });
 
@@ -86,13 +93,192 @@ describe("env command", () => {
           { name: ".env.test", isFile: () => true, isDirectory: () => false } as any
       ]);
       confirm.mockResolvedValueOnce(true);
-      await runEnvCommand("detect");
+      const res = await runEnvCommand("detect");
+      expect(res.status).toBe("success");
       expect(writeConfig).toHaveBeenCalled();
   });
 
   it("sets default environment", async () => {
       select.mockResolvedValueOnce("prod");
-      await runEnvCommand("set-default");
+      const res = await runEnvCommand("set-default");
+      expect(res.status).toBe("success");
       expect(writeConfig).toHaveBeenCalled();
+  });
+
+  describe("env command edge cases", () => {
+    it("handles loadConfigForEnvCommand fallback when file exists but config lacks builds", async () => {
+      loadConfig.mockRejectedValueOnce(new Error("load failed"));
+      fs.pathExists.mockResolvedValueOnce(true);
+      fs.readFile.mockResolvedValueOnce("projectName: Test"); // no builds
+
+      await expect(runEnvCommand("list")).rejects.toThrow("load failed");
+    });
+
+    it("handles loadConfigForEnvCommand fallback when file exists and contains builds", async () => {
+      loadConfig.mockRejectedValueOnce(new Error("load failed"));
+      fs.pathExists.mockResolvedValueOnce(true);
+      fs.readFile.mockResolvedValueOnce("projectName: Test\nbuilds:\n  store:\n    android:\n      enabled: true");
+
+      const res = await runEnvCommand("list");
+      expect(res.status).toBe("success");
+    });
+
+    it("handles view environment when no environments are configured", async () => {
+      loadConfig.mockResolvedValueOnce({
+        projectName: "Test",
+        defaultEnvironment: "",
+        environments: {}
+      } as any);
+      const res = await runEnvCommand("view");
+      expect(res.status).toBe("success");
+    });
+
+    it("handles view environment when it does not exist", async () => {
+      await expect(runEnvCommand("view", "missing")).rejects.toThrow("does not exist");
+    });
+
+    it("handles view environment with unreadable env file and empty variables", async () => {
+      const configWithFile = MOCK_CONFIG();
+      configWithFile.environments.dev.envFile = ".env.unreadable";
+      delete (configWithFile.environments.dev as any).vars;
+      loadConfig.mockResolvedValueOnce(configWithFile);
+
+      fs.readFile.mockRejectedValueOnce(new Error("read failed"));
+      const res = await runEnvCommand("view", "dev");
+      expect(res.status).toBe("success");
+    });
+
+    it("handles view environment with empty env file variables", async () => {
+      const configWithFile = MOCK_CONFIG();
+      configWithFile.environments.dev.envFile = ".env.empty";
+      loadConfig.mockResolvedValueOnce(configWithFile);
+
+      fs.readFile.mockResolvedValueOnce("");
+      const res = await runEnvCommand("view", "dev");
+      expect(res.status).toBe("success");
+    });
+
+    it("handles add environment name errors and missing defaults", async () => {
+      // empty name
+      text.mockResolvedValueOnce("");
+      await expect(runEnvCommand("add")).rejects.toThrow("Name cannot be empty");
+
+      // name exists
+      text.mockResolvedValueOnce("dev");
+      await expect(runEnvCommand("add")).rejects.toThrow("already exists");
+
+      // collectVars empty key
+      text.mockResolvedValueOnce("newenv")
+          .mockResolvedValueOnce(".env.newenv")
+          .mockResolvedValueOnce(""); // empty key
+      confirm.mockResolvedValueOnce(true) // Link env file
+             .mockResolvedValueOnce(true); // Add variable
+      await expect(runEnvCommand("add")).rejects.toThrow("Variable key cannot be empty");
+    });
+
+    it("handles edit environment when no environments exist", async () => {
+      loadConfig.mockResolvedValueOnce({
+        projectName: "Test",
+        defaultEnvironment: "",
+        environments: {}
+      } as any);
+      const res = await runEnvCommand("edit");
+      expect(res.status).toBe("success");
+    });
+
+    it("handles edit environment that does not exist", async () => {
+      await expect(runEnvCommand("edit", "missing")).rejects.toThrow("does not exist");
+    });
+
+    it("handles edit envFile option", async () => {
+      select.mockResolvedValueOnce("envFile");
+      confirm.mockResolvedValueOnce(true);
+      text.mockResolvedValueOnce(".env.modified");
+      const res = await runEnvCommand("edit", "dev");
+      expect(res.status).toBe("success");
+      expect(writeConfig).toHaveBeenCalled();
+    });
+
+    it("handles edit vars option (add variable)", async () => {
+      select.mockResolvedValueOnce("vars")
+            .mockResolvedValueOnce("add");
+      confirm.mockResolvedValueOnce(true); // add or update var
+      text.mockResolvedValueOnce("NEW_KEY")
+          .mockResolvedValueOnce("NEW_VAL");
+      confirm.mockResolvedValueOnce(false); // add another var = false
+      const res = await runEnvCommand("edit", "dev");
+      expect(res.status).toBe("success");
+      expect(writeConfig).toHaveBeenCalled();
+    });
+
+    it("handles edit vars option (delete variable)", async () => {
+      select.mockResolvedValueOnce("vars")
+            .mockResolvedValueOnce("delete")
+            .mockResolvedValueOnce("A");
+      const res = await runEnvCommand("edit", "dev");
+      expect(res.status).toBe("success");
+      expect(writeConfig).toHaveBeenCalled();
+    });
+
+    it("handles edit vars option (update variable)", async () => {
+      select.mockResolvedValueOnce("vars")
+            .mockResolvedValueOnce("update")
+            .mockResolvedValueOnce("A");
+      text.mockResolvedValueOnce("updated_value");
+      const res = await runEnvCommand("edit", "dev");
+      expect(res.status).toBe("success");
+      expect(writeConfig).toHaveBeenCalled();
+    });
+
+    it("handles remove environment that does not exist", async () => {
+      await expect(runEnvCommand("remove", "missing")).rejects.toThrow("does not exist");
+    });
+
+    it("handles remove default environment with multiple envs", async () => {
+      await expect(runEnvCommand("remove", "dev")).rejects.toThrow("Cannot remove default environment");
+    });
+
+    it("handles remove environment user cancel", async () => {
+      confirm.mockResolvedValueOnce(false); // shouldRemove = false
+      const res = await runEnvCommand("remove", "prod");
+      expect(res.status).toBe("success");
+      expect(writeConfig).not.toHaveBeenCalled();
+    });
+
+    it("handles set-default with no environments", async () => {
+      loadConfig.mockResolvedValueOnce({
+        projectName: "Test",
+        defaultEnvironment: "",
+        environments: {}
+      } as any);
+      await expect(runEnvCommand("set-default")).rejects.toThrow("No environments configured");
+    });
+
+    it("handles set-default with non-existent environment", async () => {
+      await expect(runEnvCommand("set-default", "missing")).rejects.toThrow("does not exist");
+    });
+
+    it("handles detect when no env files detected", async () => {
+      fs.readdir.mockResolvedValueOnce([]);
+      const res = await runEnvCommand("detect");
+      expect(res.status).toBe("success");
+      expect(writeConfig).not.toHaveBeenCalled();
+    });
+
+    it("handles detect user cancel", async () => {
+      fs.readdir.mockResolvedValueOnce([
+          { name: ".env.staging", isFile: () => true, isDirectory: () => false } as any
+      ]);
+      confirm.mockResolvedValueOnce(false); // shouldImport = false
+      const res = await runEnvCommand("detect");
+      expect(res.status).toBe("success");
+      expect(writeConfig).not.toHaveBeenCalled();
+    });
+
+    it("handles user cancellation (CANCELLED error)", async () => {
+      select.mockImplementationOnce(() => Promise.reject(new Error("cancelled-by-user")));
+      const res = await runEnvCommand();
+      expect(res.status).toBe("cancelled");
+    });
   });
 });

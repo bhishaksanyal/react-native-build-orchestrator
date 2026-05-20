@@ -27,7 +27,17 @@ async function withErrorHandler(name: string, isCi: boolean | undefined, fn: () 
       }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = (error instanceof Error || (error && typeof error === "object" && "message" in error))
+      ? (error as any).message
+      : String(error);
+    if (message === "Operation cancelled") {
+      if (!getCiMode()) {
+        console.log(pc.yellow("\nOperation cancelled."));
+      }
+      process.exitCode = 0;
+      return;
+    }
+
     if (getCiMode()) {
       printJson({ status: "error", command: name, message });
     } else {

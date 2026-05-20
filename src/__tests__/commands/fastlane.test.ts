@@ -31,9 +31,16 @@ const fs = (await import("fs-extra")).default as any;
 describe("fastlane command", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(process, "exit").mockImplementation(() => {
+        throw new Error("process.exit called");
+    });
     fs.pathExists.mockResolvedValue(false);
     confirm.mockResolvedValue(true);
     spinner.mockReturnValue({ start: jest.fn(), stop: jest.fn() });
+  });
+
+  afterEach(() => {
+      jest.restoreAllMocks();
   });
 
   it("sets up fastlane files", async () => {
@@ -70,7 +77,7 @@ describe("fastlane command", () => {
           }
       });
       confirm.mockResolvedValue("__CANCEL__");
-      await runFastlaneSetupCommand({ force: false });
+      await expect(runFastlaneSetupCommand({ force: false })).rejects.toThrow("Operation cancelled");
       expect(fs.writeFile).not.toHaveBeenCalled();
   });
 

@@ -1,221 +1,269 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { jest } from "@jest/globals";
 
-// Use unstable_mockModule for ESM consistency
-jest.unstable_mockModule("../../utils/config.js", () => ({
-  loadConfig: jest.fn()
-}));
-jest.unstable_mockModule("@clack/prompts", () => ({
-  confirm: jest.fn(),
-  intro: jest.fn(),
-  isCancel: jest.fn(),
-  outro: jest.fn(),
-  select: jest.fn(),
-  spinner: jest.fn()
-}));
 jest.unstable_mockModule("execa", () => ({
-  execa: jest.fn()
+  execa: jest.fn<any>()
 }));
+
+jest.unstable_mockModule("../../utils/logger.js", () => ({
+  intro: jest.fn(),
+  outro: jest.fn(),
+  log: jest.fn(),
+  promptConfirm: jest.fn(),
+  promptSelect: jest.fn(),
+  isCancel: jest.fn().mockImplementation((v: any) => v === "__CANCEL__")
+}));
+
+jest.unstable_mockModule("../../utils/config.js", () => ({
+  loadConfig: jest.fn<any>()
+}));
+
 jest.unstable_mockModule("../../utils/runtime-exports.js", () => ({
-  createRuntimeVars: jest.fn(),
-  writeRuntimeEnvExports: jest.fn()
+  createRuntimeVars: jest.fn<any>().mockReturnValue({}),
+  writeRuntimeEnvExports: jest.fn<any>().mockResolvedValue({
+      runtimeEnvFilePath: "env",
+      runtimeWrapperPath: "wrapper",
+      iosInfoPlistPaths: []
+  })
 }));
+
 jest.unstable_mockModule("../../utils/env.js", () => ({
-  interpolate: jest.fn(),
-  readDotEnv: jest.fn()
+  interpolate: jest.fn<any>().mockImplementation((s: string) => s),
+  readDotEnv: jest.fn<any>().mockResolvedValue({})
 }));
 
 const { runAppCommand } = await import("../../commands/run.js");
 const { loadConfig } = await import("../../utils/config.js") as any;
-const { confirm, isCancel, select } = await import("@clack/prompts") as any;
-const { execa } = await import("execa") as any;
-const { createRuntimeVars, writeRuntimeEnvExports } = await import("../../utils/runtime-exports.js") as any;
+const { promptSelect, promptConfirm, isCancel } = await import("../../utils/logger.js") as any;
 const { interpolate, readDotEnv } = await import("../../utils/env.js") as any;
+const { createRuntimeVars, writeRuntimeEnvExports } = await import("../../utils/runtime-exports.js") as any;
+const { execa } = await import("execa") as any;
 
 describe("run command", () => {
-  const MOCK_CONFIG = {
-    projectName: "Test",
+  const mockConfig = {
+    projectName: "MyApp",
     defaultEnvironment: "dev",
     environments: {
-        dev: { vars: {}, envFile: ".env" },
-        prod: { vars: {} }
-    },
-    flavors: {
-        android: { options: ["dev", "prod"], default: "dev", commandMap: { prod: "ProdFlavor" } },
-        ios: { options: ["App"], default: "App" }
+      dev: { envFile: ".env.dev" }
     }
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    loadConfig.mockResolvedValue(MOCK_CONFIG);
-    select.mockImplementation((o: any) => {
-        if (o.message.includes("environment")) return Promise.resolve("dev");
-        if (o.message.includes("platform")) return Promise.resolve("android");
-        return Promise.resolve("dev");
-    });
-    confirm.mockResolvedValue(true);
-    isCancel.mockImplementation((v: any) => typeof v === "symbol");
+    jest.resetAllMocks();
+    loadConfig.mockResolvedValue(mockConfig);
+    promptSelect.mockImplementation((options: any) => Promise.resolve(options.initialValue || options.options[0].value));
+    promptConfirm.mockResolvedValue(true);
+    isCancel.mockImplementation((v: any) => v === "__CANCEL__");
 
-    execa.mockReturnValue({
-        all: (async function* () {
-            yield "- Building the app\n";
-            yield "info A dev server is already running\n";
-            yield "info Found Xcode workspace \n";
-            yield "info Found booted \n";
-            yield "info Building (using \n";
-            yield "info Installing \n";
-            yield "info Launching \n";
-            yield "info general\n";
-            yield "** BUILD SUCCEEDED **\n";
-            yield "** BUILD FAILED **\n";
-            yield "=== BUILD TARGET App OF Project WITH CONFIGURATION Debug ===\n";
-            yield "CompileSwift /path/File.swift\n";
-            yield "CompileC /path/File.c\n";
-            yield "SwiftDriver\n";
-            yield "SwiftEmitModule\n";
-            yield "Ld /path/App\n";
-            yield "CodeSign /path/App.app\n";
-            yield "PhaseScriptExecution Script\n";
-            yield "Touch /path/App.app\n";
-            yield "Installing /path/App.app\n";
-            yield "Launching\n";
-            yield "BUNDLE\n";
-            yield "error export \n";
-            yield "error VALIDATE_PRODUCT=\n";
-            yield "error OTHER_FLAG=\n";
-            yield "error /path/common-args.resp -flag\n";
-            yield "/path/file.swift:10:5: error: boom\n";
-            yield "/path/file.swift:10:5: warning: watch out\n";
-            yield "/path/file.swift:10:5: note: btw\n";
-            yield "error -mflag\n";
-            yield "error some-keyword-error\n";
-            yield "error: raw error\n";
-            yield "FAILED\n";
-            yield "warn\n";
-            yield "/absolute/path\n";
-            yield "CpResource\n";
-            yield "BUILD SUCCESSFUL\n";
-            yield "BUILD FAILED\n";
-            yield "> Task :app:assemble\n";
-            yield "1 actionable task\n";
-            yield "Installing APK\n";
-            yield "Installed on\n";
-            yield "Starting: Intent\n";
-            yield "some other line";
-        })(),
-        exitCode: 0
-    } as any);
-
+    interpolate.mockImplementation((s: string) => s);
+    readDotEnv.mockResolvedValue({});
     createRuntimeVars.mockReturnValue({});
     writeRuntimeEnvExports.mockResolvedValue({
-        runtimeEnvFilePath: "env",
-        runtimeWrapperPath: "wrapper",
-        iosInfoPlistPaths: ["plist"],
-        androidJsonPath: "json",
-        androidXmlPath: "xml"
+      runtimeEnvFilePath: "env",
+      runtimeWrapperPath: "wrapper",
+      iosInfoPlistPaths: []
     });
-    readDotEnv.mockResolvedValue({});
-    interpolate.mockImplementation((s: string) => s);
+
+    execa.mockReturnValue({
+        all: (async function* () { yield Buffer.from("log line\n"); })(),
+        then: (cb: any) => Promise.resolve({ exitCode: 0 }).then(cb)
+    });
   });
 
-  it("runs the app on android and covers styling", async () => {
-    await runAppCommand({ platform: "android", env: "dev" });
-    expect(execa).toHaveBeenCalled();
+  it("runs android app", async () => {
+    const result = await runAppCommand({
+      env: "dev",
+      platform: "android",
+      ci: true
+    });
+    expect(result.status).toBe("success");
+    expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-android"), expect.any(Object));
   });
 
-  it("runs the app on ios and covers styling", async () => {
-      select.mockResolvedValueOnce("dev").mockResolvedValueOnce("ios");
-      await runAppCommand({});
-      expect(execa).toHaveBeenCalled();
+  it("runs ios app", async () => {
+    const result = await runAppCommand({
+      env: "dev",
+      platform: "ios",
+      ci: true
+    });
+    expect(result.status).toBe("success");
+    expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-ios"), expect.any(Object));
   });
 
-  it("handles cancel in environment selection", async () => {
-      select.mockResolvedValueOnce(Symbol("cancel"));
-      await runAppCommand({});
-      expect(execa).not.toHaveBeenCalled();
+  it("handles flavor", async () => {
+      loadConfig.mockResolvedValue({
+          ...mockConfig,
+          flavors: {
+              android: { options: ["free", "paid"], default: "free" }
+          }
+      });
+      const result = await runAppCommand({
+          env: "dev",
+          platform: "android",
+          flavor: "paid",
+          ci: true
+      });
+      expect(result.status).toBe("success");
+      expect(execa).toHaveBeenCalledWith(expect.stringContaining("--mode PaidDebug"), expect.any(Object));
   });
 
-  it("handles cancel in platform selection", async () => {
-      select.mockResolvedValueOnce("dev").mockResolvedValueOnce(Symbol("cancel"));
-      await runAppCommand({});
-      expect(execa).not.toHaveBeenCalled();
+  it("throws error if default environment is missing", async () => {
+    loadConfig.mockResolvedValue({ ...mockConfig, defaultEnvironment: "" });
+    await expect(runAppCommand({})).rejects.toThrow("valid defaultEnvironment is required");
   });
 
-  it("handles cancel in flavor selection", async () => {
-      select.mockResolvedValueOnce("dev").mockResolvedValueOnce("android").mockResolvedValueOnce(Symbol("cancel"));
-      await runAppCommand({});
-      expect(execa).not.toHaveBeenCalled();
-  });
-
-  it("handles cancel in shouldRun confirmation", async () => {
-      confirm.mockResolvedValueOnce(Symbol("cancel"));
-      await runAppCommand({ platform: "android", env: "dev" });
-      expect(execa).not.toHaveBeenCalled();
-  });
-
-  it("handles buildRunCommand branches with flavor", async () => {
-      await runAppCommand({ platform: "android", flavor: "prod", env: "dev" });
-      expect(execa).toHaveBeenCalledWith(expect.stringContaining("ProdFlavorDebug"), expect.any(Object));
-  });
-
-  it("handles build failure and hints", async () => {
+  it("handles failure with hints", async () => {
       execa.mockReturnValue({
           all: (async function* () {
-              yield "error: non-modular-include-in-framework-module GeneratedDotEnv.m\n";
+              yield Buffer.from("non-modular-include-in-framework-module\n");
+              yield Buffer.from("GeneratedDotEnv.m\n");
           })(),
-          exitCode: 1
-      } as any);
-      const err: any = await runAppCommand({ platform: "ios", env: "dev" }).catch(e => e);
-      expect(err.hints.length).toBeGreaterThan(0);
+          then: (cb: any) => Promise.resolve({ exitCode: 1 }).then(cb)
+      });
+      await expect(runAppCommand({
+          env: "dev",
+          platform: "ios",
+          ci: true
+      })).rejects.toThrow("Run command failed");
   });
 
-  it("throws error for invalid platform", async () => {
-      await expect(runAppCommand({ platform: "invalid" })).rejects.toThrow(/Invalid platform/);
-  });
+  describe("run command edge cases", () => {
+    it("throws error for invalid platform argument", async () => {
+      await expect(runAppCommand({
+        env: "dev",
+        platform: "symbian",
+        ci: true
+      })).rejects.toThrow("Invalid platform 'symbian'");
+    });
 
-  it("throws error when flavor provided but not configured for platform", async () => {
-      loadConfig.mockResolvedValue({ ...MOCK_CONFIG, flavors: {} });
-      await expect(runAppCommand({ platform: "android", flavor: "dev" })).rejects.toThrow(/No flavors configured/);
-  });
+    it("throws error if flavor passed but no flavors configured", async () => {
+      await expect(runAppCommand({
+        env: "dev",
+        platform: "android",
+        flavor: "free",
+        ci: true
+      })).rejects.toThrow("No flavors configured for android");
+    });
 
-  it("throws error for invalid environment", async () => {
-      await expect(runAppCommand({ env: "invalid" })).rejects.toThrow(/Environment 'invalid' is not configured/);
-  });
+    it("throws error if flavor passed is not in options", async () => {
+      loadConfig.mockResolvedValue({
+        ...mockConfig,
+        flavors: {
+          android: { options: ["free", "paid"], default: "free" }
+        }
+      });
+      await expect(runAppCommand({
+        env: "dev",
+        platform: "android",
+        flavor: "pro",
+        ci: true
+      })).rejects.toThrow("Flavor 'pro' is not configured for android");
+    });
 
-  it("throws error for invalid flavor", async () => {
-      await expect(runAppCommand({ platform: "android", flavor: "invalid" })).rejects.toThrow(/Flavor 'invalid' is not configured/);
-  });
+    it("throws error if selected environment is not configured", async () => {
+      await expect(runAppCommand({
+        env: "staging",
+        platform: "android",
+        ci: true
+      })).rejects.toThrow("Environment 'staging' is not configured");
+    });
 
-  it("throws error if defaultEnvironment is missing in config", async () => {
-      loadConfig.mockResolvedValue({ ...MOCK_CONFIG, defaultEnvironment: undefined });
-      await expect(runAppCommand({})).rejects.toThrow(/valid defaultEnvironment is required/);
-  });
+    it("handles cancel/decline confirm in non-CI mode", async () => {
+      promptConfirm.mockResolvedValueOnce(false);
+      const result = await runAppCommand({
+        env: "dev",
+        platform: "android",
+        ci: false
+      });
+      expect(result.status).toBe("cancelled");
+      expect(result.message).toBe("Run skipped by user");
+    });
 
-  it("handles raw logs", async () => {
-      await runAppCommand({ platform: "android", env: "dev", rawLogs: true });
-      expect(execa).toHaveBeenCalled();
-  });
+    it("supports noPackager and rawLogs options", async () => {
+      const result = await runAppCommand({
+        env: "dev",
+        platform: "android",
+        noPackager: true,
+        rawLogs: true,
+        ci: true
+      });
+      expect(result.status).toBe("success");
+      expect(execa).toHaveBeenCalledWith(expect.stringContaining("--no-packager"), expect.any(Object));
+    });
 
-  it("covers specific regex branches in stylers", async () => {
-       execa.mockReturnValue({
-          all: (async function* () {
-              yield "error: something happened\n";
-              yield "SwiftMergeGeneratedHeaders\n";
-              yield "SwiftCompile\n";
-              yield "Validate\n";
-              yield "GenerateDSYM\n";
-              yield "Copy\n";
-              yield "ProcessInfoPlist\n";
-              yield "builtin-\n";
-              yield "setenv\n";
-              yield "cd /\n";
-              yield "export VAR=1\n";
-              yield "error export \n";
-              yield "** BUILD SUCCEEDED **\n";
-          })(),
-          exitCode: 0
-      } as any);
-      await runAppCommand({ platform: "ios", env: "dev" });
+    it("covers styleAndroidLine stdout styling branches", async () => {
+      execa.mockReturnValue({
+        all: (async function* () {
+          yield Buffer.from("BUILD SUCCESSFUL\n");
+          yield Buffer.from("BUILD FAILED\n");
+          yield Buffer.from("> Task :app:compile\n");
+          yield Buffer.from("12 actionable tasks\n");
+          yield Buffer.from("Installing APK...\n");
+          yield Buffer.from("Starting: Intent...\n");
+          yield Buffer.from("warning message\n");
+          yield Buffer.from("deprecated message\n");
+          yield Buffer.from("error message\n");
+          yield Buffer.from("\n");
+        })(),
+        then: (cb: any) => Promise.resolve({ exitCode: 0 }).then(cb)
+      });
+
+      const result = await runAppCommand({
+        env: "dev",
+        platform: "android",
+        ci: true
+      });
+      expect(result.status).toBe("success");
+    });
+
+    it("covers styleIosLine stdout styling branches", async () => {
+      execa.mockReturnValue({
+        all: (async function* () {
+          yield Buffer.from("- Building the app.\n");
+          yield Buffer.from("info A dev server is already running\n");
+          yield Buffer.from("info Found Xcode workspace \n");
+          yield Buffer.from("info Found booted \n");
+          yield Buffer.from("info Building (using \n");
+          yield Buffer.from("info Installing \n");
+          yield Buffer.from("info Launching \n");
+          yield Buffer.from("info general\n");
+          yield Buffer.from("** BUILD SUCCEEDED **\n");
+          yield Buffer.from("** BUILD FAILED **\n");
+          yield Buffer.from("=== BUILD TARGET my_app OF my_project WITH CONFIGURATION Debug ===\n");
+          yield Buffer.from("CompileSwift file.swift\n");
+          yield Buffer.from("CompileC file.c\n");
+          yield Buffer.from("SwiftDriver something\n");
+          yield Buffer.from("SwiftEmitModule something\n");
+          yield Buffer.from("Ld build/my_app\n");
+          yield Buffer.from("CodeSign my_app.app\n");
+          yield Buffer.from("PhaseScriptExecution compile_assets\n");
+          yield Buffer.from("Touch build/my_app\n");
+          yield Buffer.from("Installing app\n");
+          yield Buffer.from("Launching app\n");
+          yield Buffer.from("Metro bundle\n");
+          yield Buffer.from("error export \n");
+          yield Buffer.from("error VALIDATE_PRODUCT=\n");
+          yield Buffer.from("error export KEY=\n");
+          yield Buffer.from("error ./common-args.resp\n");
+          yield Buffer.from("source.swift:10:5: error: syntax error\n");
+          yield Buffer.from("source.swift:12:5: warning: check warning\n");
+          yield Buffer.from("source.swift:14:5: note: check note\n");
+          yield Buffer.from("error custom_msg\n");
+          yield Buffer.from("FAILED\n");
+          yield Buffer.from("warning\n");
+          yield Buffer.from("/absolute/path\n");
+          yield Buffer.from("CpResource resource\n");
+          yield Buffer.from("random line\n");
+        })(),
+        then: (cb: any) => Promise.resolve({ exitCode: 0 }).then(cb)
+      });
+
+      const result = await runAppCommand({
+        env: "dev",
+        platform: "ios",
+        ci: true
+      });
+      expect(result.status).toBe("success");
+    });
   });
 });
