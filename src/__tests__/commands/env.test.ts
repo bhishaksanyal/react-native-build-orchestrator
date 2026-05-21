@@ -284,8 +284,8 @@ describe("env command", () => {
     });
 
     it("unwraps cancelled symbol as throw", async () => {
-        const CANCEL_VAL = "__CANCEL__";
-        isCancel.mockImplementation((v: any) => v === CANCEL_VAL);
+        const CANCEL_VAL = Symbol("CANCEL");
+        isCancel.mockImplementation((val) => val === CANCEL_VAL);
         select.mockResolvedValueOnce(CANCEL_VAL);
         const res = await runEnvCommand("view");
         expect(res.status).toBe("cancelled");
