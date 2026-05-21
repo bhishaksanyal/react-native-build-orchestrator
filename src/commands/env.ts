@@ -12,9 +12,9 @@ import { createTable } from "../utils/ui.js";
 
 type EnvAction = "list" | "view" | "add" | "edit" | "remove" | "set-default" | "detect";
 type LoadedConfig = Awaited<ReturnType<typeof loadConfig>>;
-const CANCELLED = "cancelled-by-user";
+const CANCELLED = "Operation cancelled";
 
-function unwrap<T>(value: T | symbol): T {
+export function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) {
     throw new Error(CANCELLED);
   }

@@ -36,4 +36,28 @@ describe("sync runtime env", () => {
     await syncRuntimeEnvFromConfig("/app", MOCK_CONFIG as any);
     expect(writeRuntimeEnvExports).toHaveBeenCalled();
   });
+
+  it("returns null if no environment name is provided or default is missing", async () => {
+    const configNoDefault = { ...MOCK_CONFIG, defaultEnvironment: "" };
+    const res = await syncRuntimeEnvFromConfig("/app", configNoDefault as any);
+    expect(res).toBeNull();
+  });
+
+  it("returns null if environment config is missing", async () => {
+    const res = await syncRuntimeEnvFromConfig("/app", MOCK_CONFIG as any, "missing");
+    expect(res).toBeNull();
+  });
+
+  it("handles environment without envFile", async () => {
+      const configNoFile = {
+          ...MOCK_CONFIG,
+          environments: {
+              noFile: { vars: { KEY: "VAL" } }
+          }
+      };
+      const res = await syncRuntimeEnvFromConfig("/app", configNoFile as any, "noFile");
+      expect(res).not.toBeNull();
+      expect(readDotEnv).not.toHaveBeenCalled();
+      expect(writeRuntimeEnvExports).toHaveBeenCalled();
+  });
 });

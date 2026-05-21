@@ -68,7 +68,7 @@ function buildRunCommand(params: {
   return `npx react-native run-ios${schemeFlag}${params.noPackager ? " --no-packager" : ""}`;
 }
 
-function summarizeIosCompilerError(line: string): string | null {
+export function summarizeIosCompilerError(line: string): string | null {
   const normalized = line.replace(/\\=/g, "=");
 
   const sourcePath = normalized.match(/(?:^|\s)-c\s+(\/[^\s]+\.(?:m|mm|c|cc|cpp|swift))/)?.[1];

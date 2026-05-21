@@ -136,6 +136,7 @@ describe("build command", () => {
           exitCode: 0
       } as any);
       await runBuildCommand({ platform: "ios", type: "store", env: "prod" });
+      expect(execa).toHaveBeenCalledWith(expect.stringContaining("xcodebuild"), expect.any(Object));
   });
 
   describe("build command edge cases", () => {
@@ -293,6 +294,65 @@ describe("build command", () => {
 
     it("covers rawLogs enabled", async () => {
       await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, rawLogs: true });
+    });
+
+    it("throws on invalid Android artifact in helper", async () => {
+        const { asAndroidArtifact } = await import("../../commands/build.js") as any;
+        expect(() => asAndroidArtifact("invalid")).toThrow("Invalid Android artifact");
+    });
+
+    it("resolves flavor values correctly", async () => {
+        const { resolveFlavorValue } = await import("../../commands/build.js") as any;
+        expect(resolveFlavorValue(undefined, undefined)).toBe("");
+        expect(resolveFlavorValue({ dev: "DevFlavor" }, "dev")).toBe("DevFlavor");
+        expect(resolveFlavorValue({ dev: "DevFlavor" }, "prod")).toBe("prod");
+    });
+
+    it("covers applyAndroidArtifactToCommand when task is NOT present in template", async () => {
+        const { applyAndroidArtifactToCommand } = await import("../../commands/build.js") as any;
+        expect(applyAndroidArtifactToCommand("gradlew assembleDebug", "development", "bundle")).toBe("gradlew bundleDebug");
+        expect(applyAndroidArtifactToCommand("gradlew assembleRelease", "store", "bundle")).toBe("gradlew bundleRelease");
+    });
+
+    it("covers applyIosFlavorToCommand when flavor is NOT present in template", async () => {
+        const { applyIosFlavorToCommand } = await import("../../commands/build.js") as any;
+        expect(applyIosFlavorToCommand("xcodebuild", "MyScheme")).toBe("xcodebuild -scheme MyScheme");
+        expect(applyIosFlavorToCommand("xcodebuild -scheme Old", "New")).toBe("xcodebuild -scheme New");
+    });
+
+    it("covers resolveAndroidOutputHint replacements", async () => {
+        const { resolveAndroidOutputHint } = await import("../../commands/build.js") as any;
+        expect(resolveAndroidOutputHint("/outputs/bundle/app.aab", "store", "apk")).toBe("/outputs/apk/app.apk");
+    });
+
+    it("handles openFolder failure", async () => {
+        const configWithHint = JSON.parse(JSON.stringify(MOCK_CONFIG));
+        configWithHint.builds.store.android.outputHint = "dist";
+        loadConfig.mockResolvedValue(configWithHint);
+        fs.pathExists.mockResolvedValue(true);
+        fs.stat.mockResolvedValue({ isDirectory: () => true });
+
+        // Force execa failure for open
+        execa.mockImplementation((cmd: string) => {
+            if (cmd === "open" || cmd === "explorer" || cmd === "xdg-open") {
+                return Promise.reject(new Error("open failed"));
+            }
+            return {
+                all: (async function* () { yield "ok"; })(),
+                exitCode: 0
+            };
+        });
+
+        Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
+        await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+    });
+
+    it("stylePrettyLine covers remaining branches", async () => {
+        const { stylePrettyLine } = await import("../../commands/build.js") as any;
+        expect(stylePrettyLine("")).toBe("");
+        expect(stylePrettyLine("BUILD SUCCESSFUL")).toContain("BUILD SUCCESSFUL");
+        expect(stylePrettyLine("> Task :app:assemble")).toContain("> Task");
+        expect(stylePrettyLine("warning: something")).toContain("warning:");
     });
   });
 });

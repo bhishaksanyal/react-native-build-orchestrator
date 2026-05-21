@@ -139,28 +139,28 @@ async function resolveFastlaneRunner(projectDir: string): Promise<string> {
   }
 }
 
-function asPlatform(input: string): Platform {
+export function asPlatform(input: string): Platform {
   if (!PLATFORMS.includes(input as Platform)) {
     throw new Error(`Invalid platform '${input}'. Use: ${PLATFORMS.join(", ")}`);
   }
   return input as Platform;
 }
 
-function asBuildType(input: string): BuildType {
+export function asBuildType(input: string): BuildType {
   if (!BUILD_TYPES.includes(input as BuildType)) {
     throw new Error(`Invalid build type '${input}'. Use: ${BUILD_TYPES.join(", ")}`);
   }
   return input as BuildType;
 }
 
-function asAndroidArtifact(input: string): AndroidArtifact {
+export function asAndroidArtifact(input: string): AndroidArtifact {
   if (input !== "apk" && input !== "bundle") {
     throw new Error("Invalid Android artifact. Use: apk | bundle");
   }
   return input;
 }
 
-function resolveFlavorValue(
+export function resolveFlavorValue(
   commandMap: Record<string, string> | undefined,
   selectedFlavor: string | undefined
 ): string {

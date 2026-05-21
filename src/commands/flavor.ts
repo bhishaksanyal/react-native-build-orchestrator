@@ -12,8 +12,11 @@ type LoadedConfig = Awaited<ReturnType<typeof loadConfig>>;
 
 const CANCELLED = "Operation cancelled";
 
-function unwrap<T>(value: T): T {
-  return value;
+function unwrap<T>(value: T | symbol): T {
+  if (isCancel(value)) {
+    throw new Error(CANCELLED);
+  }
+  return value as T;
 }
 
 function ensureFlavorPlatform(config: LoadedConfig, platform: Platform): FlavorPlatformConfig {

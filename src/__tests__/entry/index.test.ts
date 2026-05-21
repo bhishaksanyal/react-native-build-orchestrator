@@ -50,13 +50,17 @@ describe("CLI entry point", () => {
     registeredCommands = [];
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   afterAll(() => {
     process.argv = originalArgv;
   });
 
   it("registers all commands and handles their actions", async () => {
     const { program } = await import("commander") as any;
-    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
 
     await import(`../../index.js?t=${Date.now()}`);
 
@@ -67,7 +71,6 @@ describe("CLI entry point", () => {
     }
 
     expect(program.name).toHaveBeenCalledWith("rnbuild");
-    errorSpy.mockRestore();
   });
 
   it("covers catch blocks in index.ts for all commands", async () => {
@@ -115,8 +118,6 @@ describe("CLI entry point", () => {
               expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(`${name} string fail`));
           }
       }
-
-      errorSpy.mockRestore();
   });
 
   it("covers specific logic branches in index.ts", async () => {
@@ -139,8 +140,6 @@ describe("CLI entry point", () => {
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Invalid action"));
       await (flavorCmd as any)._actionHandler("list", "invalid");
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Platform must be one of"));
-
-      errorSpy.mockRestore();
   });
 
   it("covers CI mode and cancellation flows in index.ts", async () => {
@@ -185,6 +184,13 @@ describe("CLI entry point", () => {
       await initCmd._actionHandler({ ci: true });
       expect(logSpy).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(0);
+
+      // 6. Explicit "Operation cancelled" throw
+      runInitCommand.mockRejectedValueOnce(new Error("Operation cancelled"));
+      setCiMode(false);
+      logSpy.mockClear();
+      await initCmd._actionHandler({});
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Operation cancelled"));
 
       stdoutSpy.mockRestore();
       logSpy.mockRestore();

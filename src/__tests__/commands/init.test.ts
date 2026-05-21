@@ -130,5 +130,23 @@ describe("init command", () => {
       expect(result.platforms).toContain("android");
       expect(result.platforms).toContain("ios");
     });
+
+    it("detectProjectName fallbacks to directory name if package.json is invalid", async () => {
+        fs.pathExists.mockImplementation(async (p: string) => {
+            if (p.endsWith("ios")) return false;
+            if (p.endsWith("package.json")) return true;
+            return false;
+        });
+        fs.readJson.mockRejectedValueOnce(new Error("invalid json"));
+        await runInitCommand({ force: true, cwd: "/my-app-folder" });
+        expect(writeConfig).toHaveBeenCalledWith(expect.stringContaining("my-app-folder"), expect.objectContaining({ projectName: "my-app-folder" }));
+    });
+
+    it("detectProjectName fallbacks to default name if everything fails", async () => {
+        fs.pathExists.mockResolvedValue(false);
+        // For path.basename to return empty, cwd should be root "/"
+        await runInitCommand({ force: true, cwd: "/" });
+        expect(writeConfig).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ projectName: "my-rn-app" }));
+    });
   });
 });

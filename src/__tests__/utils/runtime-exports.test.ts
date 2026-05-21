@@ -16,7 +16,13 @@ jest.unstable_mockModule("fs-extra", () => ({
 const { createRuntimeVars, writeRuntimeEnvExports } = await import("../../utils/runtime-exports.js");
 const fs = (await import("fs-extra")).default as any;
 
+const normalizePath = (p: string) => p.replace(/\\/g, "/");
+
 describe("runtime exports utility", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it("creates runtime variables from various sources", () => {
     const vars = createRuntimeVars({
       envName: "prod",
@@ -53,14 +59,14 @@ describe("runtime exports utility", () => {
 
     it("updates ios Info.plist if they exist", async () => {
         (fs.pathExists as any).mockImplementation((p: string) => {
-            const normalizedPath = p.replace(/\\/g, "/");
+            const normalizedPath = normalizePath(p);
             if (normalizedPath.includes("android")) return Promise.resolve(false);
-            if (normalizedPath.endsWith("ios")) return Promise.resolve(true);
+            if (normalizedPath.endsWith("/ios")) return Promise.resolve(true);
             return Promise.resolve(true);
         });
 
         (fs.readdir as any).mockImplementation((p: string, options: any) => {
-            const normalizedPath = p.replace(/\\/g, "/");
+            const normalizedPath = normalizePath(p);
             if (normalizedPath.endsWith("/ios")) {
                 const entries = [
                     { name: "App", isDirectory: () => true, isFile: () => false, isSymlink: () => false },
@@ -78,7 +84,7 @@ describe("runtime exports utility", () => {
         });
 
         (fs.readFile as any).mockImplementation((p: string) => {
-            const normalizedPath = p.replace(/\\/g, "/");
+            const normalizedPath = normalizePath(p);
             if (normalizedPath.endsWith("Info.plist")) return Promise.resolve("<dict>\n</dict>");
             return Promise.resolve("// some content");
         });
@@ -86,5 +92,6 @@ describe("runtime exports utility", () => {
         const res = await writeRuntimeEnvExports("/app", "prod", { KEY: "VAL" });
         expect(res.iosInfoPlistPaths).toContain(path.join("/app", "ios", "App", "Info.plist"));
     });
+
   });
 });
