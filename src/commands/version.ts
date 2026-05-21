@@ -4,6 +4,9 @@ import { intro, isCancel, outro, select, text } from "@clack/prompts";
 import pc from "picocolors";
 
 import { loadConfig } from "../utils/config.js";
+import { asPlatform } from "../utils/validation.js";
+import { resolveFlavorValue } from "../utils/flavor.js";
+import { escapeRegExp } from "../utils/env.js";
 import { PLATFORMS, type Platform } from "../types.js"; // PLATFORMS used for asPlatform guard
 
 interface VersionOptions {
@@ -25,25 +28,6 @@ function unwrap<T>(value: T | symbol): T {
     throw new Error(CANCELLED);
   }
   return value;
-}
-
-function asPlatform(input: string): Platform {
-  if (!PLATFORMS.includes(input as Platform)) {
-    throw new Error(`Invalid platform '${input}'. Use: ${PLATFORMS.join(", ")}`);
-  }
-  return input as Platform;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function resolveFlavorValue(
-  commandMap: Record<string, string> | undefined,
-  selectedFlavor: string | undefined
-): string {
-  if (!selectedFlavor) return "";
-  return commandMap?.[selectedFlavor] ?? selectedFlavor;
 }
 
 function toAbsoluteFromCwd(cwd: string, value: string): string {

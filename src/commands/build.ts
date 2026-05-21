@@ -9,14 +9,20 @@ import { loadConfig } from "../utils/config.js";
 import { interpolate, readDotEnv } from "../utils/env.js";
 import { createRuntimeVars, writeRuntimeEnvExports } from "../utils/runtime-exports.js";
 import {
+  asPlatform,
+  asBuildType,
+  asAndroidArtifact
+} from "../utils/validation.js";
+import { resolveFlavorValue, toFlavorTaskName } from "../utils/flavor.js";
+import { resolveAndroidOutputHint } from "../utils/build.js";
+import { runCommandWithLogs } from "../utils/exec.js";
+import {
   BUILD_TYPES,
   PLATFORMS,
   type AndroidArtifact,
   type BuildType,
   type Platform
 } from "../types.js";
-
-const ANDROID_ARTIFACTS: AndroidArtifact[] = ["apk", "bundle"];
 
 interface BuildOptions {
   env?: string;
@@ -28,32 +34,6 @@ interface BuildOptions {
   dryRun?: boolean;
   fast?: boolean;
   rawLogs?: boolean;
-}
-
-function resolveFlavorValue(
-  commandMap: Record<string, string> | undefined,
-  selectedFlavor: string | undefined
-): string {
-  if (!selectedFlavor) {
-    return "";
-  }
-
-  return commandMap?.[selectedFlavor] ?? selectedFlavor;
-}
-
-function asAndroidArtifact(input: string): AndroidArtifact {
-  if (!ANDROID_ARTIFACTS.includes(input as AndroidArtifact)) {
-    throw new Error(`Invalid Android artifact '${input}'. Use: ${ANDROID_ARTIFACTS.join(", ")}`);
-  }
-  return input as AndroidArtifact;
-}
-
-function toFlavorTaskName(flavor: string): string {
-  return flavor
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
 }
 
 function applyAndroidArtifactToCommand(
@@ -143,42 +123,6 @@ function applyIosFlavorToCommand(command: string, schemeName: string): string {
   return `${command} -scheme ${schemeName}`;
 }
 
-function resolveAndroidOutputHint(
-  outputHint: string | undefined,
-  buildType: BuildType,
-  artifact: AndroidArtifact
-): string | undefined {
-  if (!outputHint || buildType === "development") {
-    return outputHint;
-  }
-
-  if (artifact === "apk") {
-    return outputHint
-      .replace("/outputs/bundle/", "/outputs/apk/")
-      .replace(/\.aab$/i, ".apk")
-      .replace("app-release.aab", "app-release.apk");
-  }
-
-  return outputHint
-    .replace("/outputs/apk/", "/outputs/bundle/")
-    .replace(/\.apk$/i, ".aab")
-    .replace("app-release.apk", "app-release.aab");
-}
-
-function asBuildType(input: string): BuildType {
-  if (!BUILD_TYPES.includes(input as BuildType)) {
-    throw new Error(`Invalid build type '${input}'. Use: ${BUILD_TYPES.join(", ")}`);
-  }
-  return input as BuildType;
-}
-
-function asPlatform(input: string): Platform {
-  if (!PLATFORMS.includes(input as Platform)) {
-    throw new Error(`Invalid platform '${input}'. Use: ${PLATFORMS.join(", ")}`);
-  }
-  return input as Platform;
-}
-
 function looksLikePath(value: string): boolean {
   return value.includes("/") || value.includes("\\") || value.startsWith(".");
 }
@@ -256,118 +200,6 @@ function augmentCommandForFastTrack(command: string, platform: Platform): string
   return command;
 }
 
-function stylePrettyLine(line: string): string {
-  const trimmed = line.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  if (
-    trimmed.includes("BUILD SUCCESSFUL") ||
-    trimmed.includes("ARCHIVE SUCCEEDED") ||
-    trimmed.includes("Succeeded")
-  ) {
-    return pc.green(`  ${trimmed}`);
-  }
-
-  if (
-    trimmed.includes("BUILD FAILED") ||
-    trimmed.includes("FAILED") ||
-    trimmed.includes("error:") ||
-    trimmed.includes("** ARCHIVE FAILED **")
-  ) {
-    return pc.red(`  ${trimmed}`);
-  }
-
-  if (trimmed.startsWith("> Task")) {
-    return pc.cyan(`  ${trimmed}`);
-  }
-
-  if (
-    trimmed.startsWith("warning:") ||
-    trimmed.includes("deprecated") ||
-    trimmed.includes("Deprecation")
-  ) {
-    return pc.yellow(`  ${trimmed}`);
-  }
-
-  if (
-    trimmed.startsWith("Compile") ||
-    trimmed.startsWith("Ld ") ||
-    trimmed.startsWith("CodeSign") ||
-    trimmed.startsWith("PhaseScriptExecution")
-  ) {
-    return pc.blue(`  ${trimmed}`);
-  }
-
-  return pc.gray(`  ${trimmed}`);
-}
-
-async function runBuildWithLogs(params: {
-  command: string;
-  cwd: string;
-  env: Record<string, string | undefined>;
-  rawLogs: boolean;
-}): Promise<string> {
-  const logsDir = path.join(params.cwd, ".rnbuild", "logs");
-  await fs.ensureDir(logsDir);
-  const logPath = path.join(logsDir, `build-${Date.now()}.log`);
-
-  const child = execa(params.command, {
-    cwd: params.cwd,
-    shell: true,
-    env: params.env,
-    all: true,
-    reject: false
-  });
-
-  let pending = "";
-  let rawLog = "";
-
-  if (child.all) {
-    for await (const chunk of child.all) {
-      const text = chunk.toString();
-      rawLog += text;
-      pending += text;
-
-      while (pending.includes("\n")) {
-        const newlineIndex = pending.indexOf("\n");
-        const line = pending.slice(0, newlineIndex).replace(/\r$/, "");
-        pending = pending.slice(newlineIndex + 1);
-
-        if (params.rawLogs) {
-          console.log(line);
-        } else {
-          const styled = stylePrettyLine(line);
-          if (styled) {
-            console.log(styled);
-          }
-        }
-      }
-    }
-  }
-
-  if (pending.trim()) {
-    rawLog += `${pending}\n`;
-    if (params.rawLogs) {
-      console.log(pending);
-    } else {
-      const styled = stylePrettyLine(pending);
-      if (styled) {
-        console.log(styled);
-      }
-    }
-  }
-
-  await fs.writeFile(logPath, rawLog, "utf8");
-
-  const result = await child;
-  if (result.exitCode !== 0) {
-    throw new Error(`Build command failed. Full logs: ${logPath}`);
-  }
-
-  return logPath;
-}
 
 export async function runBuildCommand(options: BuildOptions): Promise<void> {
   const projectDir = options.cwd ? path.resolve(options.cwd) : process.cwd();
@@ -591,10 +423,15 @@ export async function runBuildCommand(options: BuildOptions): Promise<void> {
       runtimeVars
     );
 
-    const logPath = await runBuildWithLogs({
+    const logsDir = path.join(projectDir, ".rnbuild", "logs");
+    const logPath = path.join(logsDir, `build-${Date.now()}.log`);
+
+    await runCommandWithLogs({
       command: finalCommand,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
+      logToFilePath: logPath,
+      pretty: true,
       env: {
         ...process.env,
         ...mergedVars,

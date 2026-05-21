@@ -140,7 +140,7 @@ describe("release command", () => {
 
   it("handles fastlane failure", async () => {
       execa.mockReturnValue({ all: (async function* () { yield "fail"; })(), exitCode: 1 } as any);
-      await expect(runReleaseCommand({ platform: "android" })).rejects.toThrow(/Fastlane upload failed/);
+      await expect(runReleaseCommand({ platform: "android", env: "prod" })).rejects.toThrow(/Fastlane upload failed/);
   });
 
   it("handles ci mode", async () => {

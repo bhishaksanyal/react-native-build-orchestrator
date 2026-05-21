@@ -9,6 +9,14 @@ import { loadConfig } from "../utils/config.js";
 import { createRuntimeVars, writeRuntimeEnvExports } from "../utils/runtime-exports.js";
 import { interpolate, readDotEnv } from "../utils/env.js";
 import {
+  asPlatform,
+  asBuildType,
+  asAndroidArtifact
+} from "../utils/validation.js";
+import { resolveFlavorValue, toFlavorTaskName } from "../utils/flavor.js";
+import { resolveAndroidOutputHint } from "../utils/build.js";
+import { runCommandWithLogs } from "../utils/exec.js";
+import {
   BUILD_TYPES,
   PLATFORMS,
   type AndroidArtifact,
@@ -37,94 +45,6 @@ function toFastlaneOption(key: string, value: string): string {
   return `${key}:${JSON.stringify(value)}`;
 }
 
-function styleLine(line: string): string {
-  const trimmed = line.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  if (
-    trimmed.includes("error") ||
-    trimmed.includes("failed") ||
-    trimmed.includes("FAIL") ||
-    trimmed.includes("[!] ")
-  ) {
-    return pc.red(`  ${trimmed}`);
-  }
-
-  if (
-    trimmed.includes("warning") ||
-    trimmed.includes("deprecated") ||
-    trimmed.includes("warn")
-  ) {
-    return pc.yellow(`  ${trimmed}`);
-  }
-
-  if (
-    trimmed.includes("Uploading") ||
-    trimmed.includes("Successfully") ||
-    trimmed.includes("finished")
-  ) {
-    return pc.green(`  ${trimmed}`);
-  }
-
-  return pc.gray(`  ${trimmed}`);
-}
-
-async function runCommandWithLogs(params: {
-  command: string;
-  cwd: string;
-  env: Record<string, string | undefined>;
-  rawLogs: boolean;
-}): Promise<void> {
-  const child = execa(params.command, {
-    cwd: params.cwd,
-    shell: true,
-    env: params.env,
-    all: true,
-    reject: false
-  });
-
-  let pending = "";
-  if (child.all) {
-    for await (const chunk of child.all) {
-      const text = chunk.toString();
-      pending += text;
-
-      while (pending.includes("\n")) {
-        const newlineIndex = pending.indexOf("\n");
-        const line = pending.slice(0, newlineIndex).replace(/\r$/, "");
-        pending = pending.slice(newlineIndex + 1);
-
-        if (params.rawLogs) {
-          console.log(line);
-        } else {
-          const styled = styleLine(line);
-          if (styled) {
-            console.log(styled);
-          }
-        }
-      }
-    }
-  }
-
-  if (pending.trim()) {
-    if (params.rawLogs) {
-      console.log(pending);
-    } else {
-      const styled = styleLine(pending);
-      if (styled) {
-        console.log(styled);
-      }
-    }
-  }
-
-  const result = await child;
-  if (result.exitCode !== 0) {
-    throw new Error("Fastlane upload failed.");
-  }
-}
-
 async function resolveFastlaneRunner(projectDir: string): Promise<string> {
   try {
     await execa("bundle exec fastlane --version", {
@@ -138,67 +58,6 @@ async function resolveFastlaneRunner(projectDir: string): Promise<string> {
   }
 }
 
-function asPlatform(input: string): Platform {
-  if (!PLATFORMS.includes(input as Platform)) {
-    throw new Error(`Invalid platform '${input}'. Use: ${PLATFORMS.join(", ")}`);
-  }
-  return input as Platform;
-}
-
-function asBuildType(input: string): BuildType {
-  if (!BUILD_TYPES.includes(input as BuildType)) {
-    throw new Error(`Invalid build type '${input}'. Use: ${BUILD_TYPES.join(", ")}`);
-  }
-  return input as BuildType;
-}
-
-function asAndroidArtifact(input: string): AndroidArtifact {
-  if (input !== "apk" && input !== "bundle") {
-    throw new Error("Invalid Android artifact. Use: apk | bundle");
-  }
-  return input;
-}
-
-function resolveFlavorValue(
-  commandMap: Record<string, string> | undefined,
-  selectedFlavor: string | undefined
-): string {
-  if (!selectedFlavor) {
-    return "";
-  }
-
-  return commandMap?.[selectedFlavor] ?? selectedFlavor;
-}
-
-function toFlavorTaskName(flavor: string): string {
-  return flavor
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
-}
-
-function resolveAndroidOutputHint(
-  outputHint: string | undefined,
-  buildType: BuildType,
-  artifact: AndroidArtifact
-): string | undefined {
-  if (!outputHint || buildType === "development") {
-    return outputHint;
-  }
-
-  if (artifact === "apk") {
-    return outputHint
-      .replace("/outputs/bundle/", "/outputs/apk/")
-      .replace(/\.aab$/i, ".apk")
-      .replace("app-release.aab", "app-release.apk");
-  }
-
-  return outputHint
-    .replace("/outputs/apk/", "/outputs/bundle/")
-    .replace(/\.apk$/i, ".aab")
-    .replace("app-release.apk", "app-release.aab");
-}
 
 async function promptTrack(platform: Platform, defaultTrack: string): Promise<string> {
   if (platform === "android") {
@@ -577,6 +436,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<void> 
       command: uploadCommand,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
+      errorMessage: "Fastlane upload failed.",
       env: {
         ...process.env,
         ...uploadMergedVars,

@@ -32,3 +32,7 @@ export async function readDotEnv(filePath: string): Promise<Record<string, strin
 export function interpolate(input: string, vars: Record<string, string>): string {
   return input.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_, key: string) => vars[key] ?? "");
 }
+
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

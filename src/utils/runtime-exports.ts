@@ -1,6 +1,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 
+import { escapeRegExp } from "./env.js";
 import type { BuildType, Platform } from "../types.js";
 
 export function createRuntimeVars(params: {
@@ -31,10 +32,6 @@ function escapeXml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function toAndroidResourceSuffix(key: string): string {
