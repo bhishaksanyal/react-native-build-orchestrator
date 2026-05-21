@@ -14,6 +14,10 @@ const { parseConfig } = await import("../../schema.js");
 const fs = (await import("fs-extra")).default as any;
 
 describe("config utility", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   const MOCK_CONFIG = {
     projectName: "Test",
     defaultEnvironment: "dev",

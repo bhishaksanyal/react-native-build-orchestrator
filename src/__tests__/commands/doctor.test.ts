@@ -28,6 +28,8 @@ describe("doctor command", () => {
     const result = await runDoctorCommand();
     expect(result.status).toBe("success");
     expect(result.checks!.packageJson).toBe(true);
+    expect(fs.pathExists).toHaveBeenCalled();
+    await expect(runDoctorCommand()).resolves.toBeDefined();
   });
 
   it("reports error when config is missing", async () => {
@@ -38,6 +40,7 @@ describe("doctor command", () => {
     const result = await runDoctorCommand();
     expect(result.status).toBe("error");
     expect(result.message).toContain(".rnbuildrc.yml");
+    expect(fs.pathExists).toHaveBeenCalled();
   });
 
   it("reports error when package.json is missing", async () => {

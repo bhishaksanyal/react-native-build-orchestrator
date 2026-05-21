@@ -28,7 +28,7 @@ async function withErrorHandler(name: string, isCi: boolean | undefined, fn: () 
     }
   } catch (error) {
     const message = (error instanceof Error || (error && typeof error === "object" && "message" in error))
-      ? (error as any).message
+      ? (error as { message: string }).message
       : String(error);
     if (message === "Operation cancelled") {
       if (!getCiMode()) {

@@ -46,7 +46,7 @@ describe("env command", () => {
     jest.resetAllMocks();
     loadConfig.mockImplementation(() => Promise.resolve(MOCK_CONFIG()));
     writeConfig.mockResolvedValue("path");
-    isCancel.mockImplementation((v: any) => v === "__CANCEL__");
+    isCancel.mockImplementation((v: any) => v === "__CANCEL__" || (typeof v === "symbol" && (v.description === "clack:cancel" || v.description === "cancel")));
     fs.pathExists.mockResolvedValue(true);
     fs.readFile.mockResolvedValue("KEY=VAL");
     fs.ensureDir.mockResolvedValue(undefined);
@@ -61,11 +61,13 @@ describe("env command", () => {
   it("lists environments", async () => {
     const res = await runEnvCommand("list");
     expect(res.status).toBe("success");
+    expect(writeConfig).not.toHaveBeenCalled();
   });
 
   it("views an environment", async () => {
       const res = await runEnvCommand("view", "dev");
       expect(res.status).toBe("success");
+      expect(writeConfig).not.toHaveBeenCalled();
   });
 
   it("adds a new environment", async () => {
@@ -276,9 +278,114 @@ describe("env command", () => {
     });
 
     it("handles user cancellation (CANCELLED error)", async () => {
-      select.mockImplementationOnce(() => Promise.reject(new Error("cancelled-by-user")));
+      select.mockImplementationOnce(() => Promise.reject(new Error("Operation cancelled")));
       const res = await runEnvCommand();
       expect(res.status).toBe("cancelled");
+    });
+
+    it("unwraps cancelled symbol as throw", async () => {
+        const CANCEL_VAL = "__CANCEL__";
+        isCancel.mockImplementation((v: any) => v === CANCEL_VAL);
+        select.mockResolvedValueOnce(CANCEL_VAL);
+        const res = await runEnvCommand("view");
+        expect(res.status).toBe("cancelled");
+    });
+
+    it("handles loadConfigForEnvCommand fallback when file is empty", async () => {
+        loadConfig.mockRejectedValueOnce(new Error("load failed"));
+        fs.pathExists.mockResolvedValueOnce(true);
+        fs.readFile.mockResolvedValueOnce(""); // Empty file -> null from yaml.load
+        await expect(runEnvCommand("list")).rejects.toThrow("load failed");
+    });
+
+    it("handles add environment and it becomes default automatically if it is the first one", async () => {
+        loadConfig.mockResolvedValueOnce({
+            projectName: "Test",
+            defaultEnvironment: "",
+            environments: {}
+        } as any);
+        text.mockResolvedValueOnce("first") // name
+            .mockResolvedValueOnce(".env.first"); // file
+        confirm.mockResolvedValueOnce(true) // Link file
+               .mockResolvedValueOnce(false); // Add vars? No
+        const res = await runEnvCommand("add");
+        expect(res.status).toBe("success");
+        expect(writeConfig).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            defaultEnvironment: "first"
+        }));
+    });
+
+    it("handles view environment with no values", async () => {
+        loadConfig.mockResolvedValueOnce({
+            projectName: "Test",
+            environments: { empty: {} }
+        } as any);
+        const res = await runEnvCommand("view", "empty");
+        expect(res.status).toBe("success");
+    });
+
+    it("handles add environment and setting it as default", async () => {
+        loadConfig.mockResolvedValueOnce({
+            projectName: "Test",
+            defaultEnvironment: "dev",
+            environments: { dev: {} }
+        } as any);
+        text.mockResolvedValueOnce("prod") // name
+            .mockResolvedValueOnce(".env.prod"); // file
+        confirm.mockResolvedValueOnce(true) // Link file
+               .mockResolvedValueOnce(false) // Add vars? No
+               .mockResolvedValueOnce(true); // Set as default? Yes
+        const res = await runEnvCommand("add");
+        expect(res.status).toBe("success");
+        expect(writeConfig).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            defaultEnvironment: "prod"
+        }));
+    });
+
+    it("handles edit and ensures vars object exists", async () => {
+        loadConfig.mockResolvedValueOnce({
+            projectName: "Test",
+            environments: { dev: {} }
+        } as any);
+        select.mockResolvedValueOnce("vars");
+        confirm.mockResolvedValueOnce(false); // Add or update? No
+        const res = await runEnvCommand("edit", "dev");
+        expect(res.status).toBe("success");
+    });
+
+    it("handles remove with no environments", async () => {
+        loadConfig.mockResolvedValueOnce({ projectName: "Test", environments: {} } as any);
+        const res = await runEnvCommand("remove");
+        expect(res.status).toBe("success");
+    });
+
+    it("handles remove and resets default if removed was default and only env", async () => {
+        const singleEnvConfig = {
+            projectName: "Test",
+            defaultEnvironment: "dev",
+            environments: { dev: {} },
+            builds: { development: {}, adhoc: {}, store: {} }
+        };
+        loadConfig.mockResolvedValue(singleEnvConfig as any);
+        confirm.mockResolvedValue(true);
+        const res = await runEnvCommand("remove", "dev");
+        expect(res.status).toBe("success");
+        expect(writeConfig).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            defaultEnvironment: ""
+        }));
+    });
+
+    it("handles detect and sets default if none existed", async () => {
+        loadConfig.mockResolvedValueOnce({ projectName: "Test", environments: {} } as any);
+        fs.readdir.mockResolvedValueOnce([
+            { name: ".env.development", isFile: () => true, isDirectory: () => false } as any
+        ]);
+        confirm.mockResolvedValueOnce(true);
+        const res = await runEnvCommand("detect");
+        expect(res.status).toBe("success");
+        expect(writeConfig).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            defaultEnvironment: "development"
+        }));
     });
   });
 });

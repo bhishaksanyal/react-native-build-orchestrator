@@ -32,7 +32,7 @@ interface BuildOptions {
   rawLogs?: boolean;
 }
 
-function resolveFlavorValue(
+export function resolveFlavorValue(
   commandMap: Record<string, string> | undefined,
   selectedFlavor: string | undefined
 ): string {
@@ -43,7 +43,7 @@ function resolveFlavorValue(
   return commandMap?.[selectedFlavor] ?? selectedFlavor;
 }
 
-function asAndroidArtifact(input: string): AndroidArtifact {
+export function asAndroidArtifact(input: string): AndroidArtifact {
   if (!ANDROID_ARTIFACTS.includes(input as AndroidArtifact)) {
     throw new Error(`Invalid Android artifact '${input}'. Use: ${ANDROID_ARTIFACTS.join(", ")}`);
   }
@@ -58,7 +58,7 @@ function toFlavorTaskName(flavor: string): string {
     .join("");
 }
 
-function applyAndroidArtifactToCommand(
+export function applyAndroidArtifactToCommand(
   command: string,
   buildType: BuildType,
   artifact: AndroidArtifact
@@ -128,7 +128,7 @@ function applyAndroidFlavorToCommand(
   return updated;
 }
 
-function applyIosFlavorToCommand(command: string, schemeName: string): string {
+export function applyIosFlavorToCommand(command: string, schemeName: string): string {
   if (
     command.includes("{{FLAVOR") ||
     command.includes("{{FLAVOR_NAME") ||
@@ -145,7 +145,7 @@ function applyIosFlavorToCommand(command: string, schemeName: string): string {
   return `${command} -scheme ${schemeName}`;
 }
 
-function resolveAndroidOutputHint(
+export function resolveAndroidOutputHint(
   outputHint: string | undefined,
   buildType: BuildType,
   artifact: AndroidArtifact
@@ -258,7 +258,7 @@ function augmentCommandForFastTrack(command: string, platform: Platform): string
   return command;
 }
 
-function stylePrettyLine(line: string): string {
+export function stylePrettyLine(line: string): string {
   const trimmed = line.trim();
   if (!trimmed) {
     return "";

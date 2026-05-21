@@ -120,11 +120,13 @@ describe("version command", () => {
   it("updates versions on ios", async () => {
       const result = await runVersionCommand({ platform: "ios", version: "2.0.0", iosBuildNumber: "2" });
       expect(result.status).toBe("success");
+      expect(fs.writeFile).toHaveBeenCalled();
   });
 
   it("updates all flavors", async () => {
       const result = await runVersionCommand({ platform: "android", allFlavors: true, version: "2.0.0", androidBuildNumber: "2", iosBuildNumber: "2" });
       expect(result.status).toBe("success");
+      expect(fs.writeFile).toHaveBeenCalled();
   });
 
   describe("version command edge cases", () => {
@@ -231,6 +233,32 @@ describe("version command", () => {
       select.mockResolvedValueOnce("all"); // Android target
       select.mockResolvedValueOnce("__CANCEL__"); // iOS target cancellation or select cancel
       isCancel.mockImplementation((v: any) => v === "__CANCEL__" || v === "all"); // Wait, let's keep isCancel mock simple:
+    });
+
+    it("covers updatePbxprojBlock value missing branch", async () => {
+        // Trigger it via updateIosVersions by providing a target that DOES exist but content lacks the key
+        fs.readFile.mockResolvedValue('000000000000000000000ABC /* Build configuration list for PBXNativeTarget "App" */ = { buildConfigurations = ( DEF ); }; DEF = { buildSettings = { }; };');
+        await expect(runVersionCommand({ platform: "ios", flavor: "App", version: "2.0.0" })).rejects.toThrow("MARKETING_VERSION not found");
+    });
+
+    it("handles all iOS flavors update", async () => {
+        const configWithIosFlavors = {
+            ...mockConfig,
+            flavors: {
+                ios: { options: ["App", "AppBeta"], default: "App", commandMap: { AppBeta: "App" } }
+            }
+        };
+        loadConfig.mockResolvedValueOnce(configWithIosFlavors);
+        const result = await runVersionCommand({ platform: "ios", allFlavors: true, version: "2.0.0", iosBuildNumber: "5" });
+        expect(result.status).toBe("success");
+    });
+
+    it("handles error when ios/ directory is missing", async () => {
+        fs.pathExists.mockImplementation(async (p: string) => {
+            if (p.endsWith("ios")) return false;
+            return true;
+        });
+        await expect(runVersionCommand({ platform: "ios", version: "2.0.0" })).rejects.toThrow("ios/ directory not found");
     });
   });
 });

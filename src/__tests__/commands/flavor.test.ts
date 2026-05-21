@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { jest } from "@jest/globals";
 
+const CANCEL_SYMBOL = Symbol('cancel');
+
 jest.unstable_mockModule("../../utils/logger.js", () => ({
   intro: jest.fn(),
   outro: jest.fn(),
@@ -8,7 +10,7 @@ jest.unstable_mockModule("../../utils/logger.js", () => ({
   promptConfirm: jest.fn(),
   promptSelect: jest.fn(),
   promptText: jest.fn(),
-  isCancel: jest.fn().mockImplementation((v: any) => v === "__CANCEL__")
+  isCancel: jest.fn().mockImplementation((v: any) => v === CANCEL_SYMBOL)
 }));
 
 jest.unstable_mockModule("../../utils/config.js", () => ({
@@ -35,11 +37,19 @@ describe("flavor command", () => {
   };
 
   beforeEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
     loadConfig.mockImplementation(() => Promise.resolve(JSON.parse(JSON.stringify(mockConfig))));
-    promptSelect.mockImplementation((options: any) => Promise.resolve(options.initialValue || options.options[0].value));
-    promptConfirm.mockResolvedValue(true);
-    promptText.mockImplementation((options: any) => Promise.resolve(options.defaultValue || ""));
+
+    // Default mock implementations
+    promptSelect.mockImplementation(async (options: any) => {
+        return options.initialValue || options.options[0]?.value;
+    });
+    promptConfirm.mockImplementation(async (options: any) => {
+        return options.initialValue ?? true;
+    });
+    promptText.mockImplementation(async (options: any) => {
+        return options.defaultValue || options.placeholder || "text";
+    });
   });
 
   it("lists flavors", async () => {
@@ -55,8 +65,7 @@ describe("flavor command", () => {
   });
 
   it("edits a flavor (rename)", async () => {
-    promptSelect.mockResolvedValueOnce("edit")
-                .mockResolvedValueOnce("android")
+    promptSelect.mockResolvedValueOnce("android")
                 .mockResolvedValueOnce("dev")
                 .mockResolvedValueOnce("rename");
     promptText.mockResolvedValueOnce("renamedDev");
@@ -66,8 +75,7 @@ describe("flavor command", () => {
   });
 
   it("edits a flavor (command mapping)", async () => {
-      promptSelect.mockResolvedValueOnce("edit")
-                  .mockResolvedValueOnce("android")
+      promptSelect.mockResolvedValueOnce("android")
                   .mockResolvedValueOnce("dev")
                   .mockResolvedValueOnce("command-value");
       promptText.mockResolvedValueOnce("devTask");
@@ -77,9 +85,9 @@ describe("flavor command", () => {
   });
 
   it("removes a flavor", async () => {
-    promptSelect.mockResolvedValueOnce("remove")
-                .mockResolvedValueOnce("android")
+    promptSelect.mockResolvedValueOnce("android")
                 .mockResolvedValueOnce("prod");
+    promptConfirm.mockResolvedValueOnce(true);
     const result = await runFlavorCommand("remove");
     expect(result.status).toBe("success");
     expect(writeConfig).toHaveBeenCalled();
@@ -100,7 +108,7 @@ describe("flavor command", () => {
   });
 
   it("handles cancellation when no action is passed", async () => {
-    promptSelect.mockImplementation(() => Promise.reject(new Error("Operation cancelled")));
+    promptSelect.mockResolvedValueOnce(CANCEL_SYMBOL);
     const result = await runFlavorCommand(undefined);
     expect(result.status).toBe("cancelled");
   });
@@ -110,8 +118,9 @@ describe("flavor command", () => {
   });
 
   it("throws error when flavor name is empty", async () => {
+      promptSelect.mockResolvedValueOnce("android");
       promptText.mockResolvedValueOnce("");
-      await expect(runFlavorCommand("add", "android")).rejects.toThrow("Flavor name cannot be empty");
+      await expect(runFlavorCommand("add")).rejects.toThrow("Flavor name cannot be empty");
   });
 
   describe("flavor command edge cases", () => {
@@ -150,25 +159,23 @@ describe("flavor command", () => {
     });
 
     it("throws when renaming a flavor to a name that already exists", async () => {
-      promptSelect.mockResolvedValueOnce("android")
-                  .mockResolvedValueOnce("prod")
-                  .mockResolvedValueOnce("rename");
+      promptSelect.mockResolvedValueOnce("android") // platform
+                  .mockResolvedValueOnce("prod")    // flavor
+                  .mockResolvedValueOnce("rename"); // action
       promptText.mockResolvedValueOnce("dev"); // renaming prod to dev (dev already exists)
       await expect(runFlavorCommand("edit")).rejects.toThrow("already exists");
     });
 
     it("handles edit mapping cleanup when mapped value is empty or same as flavor name", async () => {
       // 1. empty mapped value removes key from commandMap
-      promptSelect.mockResolvedValueOnce("edit")
-                  .mockResolvedValueOnce("android")
+      promptSelect.mockResolvedValueOnce("android")
                   .mockResolvedValueOnce("prod")
                   .mockResolvedValueOnce("command-value");
       promptText.mockResolvedValueOnce(""); // empty
       await runFlavorCommand("edit");
 
       // 2. same value removes key from commandMap
-      promptSelect.mockResolvedValueOnce("edit")
-                  .mockResolvedValueOnce("android")
+      promptSelect.mockResolvedValueOnce("android")
                   .mockResolvedValueOnce("prod")
                   .mockResolvedValueOnce("command-value");
       promptText.mockResolvedValueOnce("prod"); // same as name
@@ -178,8 +185,7 @@ describe("flavor command", () => {
 
     it("handles remove flavor cancellation and commandMap cleanup", async () => {
       // cancel
-      promptSelect.mockResolvedValueOnce("remove")
-                  .mockResolvedValueOnce("android")
+      promptSelect.mockResolvedValueOnce("android")
                   .mockResolvedValueOnce("prod");
       promptConfirm.mockResolvedValueOnce(false);
       await runFlavorCommand("remove");
@@ -215,6 +221,71 @@ describe("flavor command", () => {
       const res = await runFlavorCommand("detect");
       expect(res.status).toBe("success");
       expect(writeConfig).not.toHaveBeenCalled();
+    });
+
+    it("handles list when platform has no flavors", async () => {
+        const configNoAndroidFlavors = {
+            projectName: "Test",
+            flavors: { ios: { options: ["App"], default: "App" } }
+        };
+        loadConfig.mockResolvedValueOnce(configNoAndroidFlavors as any);
+        const res = await runFlavorCommand("list");
+        expect(res.status).toBe("success");
+    });
+
+    it("handles add when commandMap already exists", async () => {
+        const configWithCommandMap = {
+            projectName: "Test",
+            flavors: {
+                android: { options: ["dev"], default: "dev", commandMap: { dev: "DevTask" } }
+            }
+        };
+        loadConfig.mockImplementation(() => Promise.resolve(JSON.parse(JSON.stringify(configWithCommandMap))));
+        promptSelect.mockResolvedValueOnce("android");
+        promptText.mockResolvedValueOnce("newFlavor").mockResolvedValueOnce("newFlavorTask");
+        promptConfirm.mockResolvedValueOnce(true);
+        const res = await runFlavorCommand("add");
+        expect(res.status).toBe("success");
+        expect(writeConfig).toHaveBeenCalled();
+    });
+
+    it("handles edit command-value and deletes commandMap if empty", async () => {
+        const configWithSingleCommandMap = {
+            projectName: "Test",
+            flavors: {
+                android: { options: ["dev"], default: "dev", commandMap: { dev: "DevTask" } }
+            }
+        };
+        loadConfig.mockImplementation(() => Promise.resolve(JSON.parse(JSON.stringify(configWithSingleCommandMap))));
+        promptSelect.mockResolvedValueOnce("android").mockResolvedValueOnce("dev").mockResolvedValueOnce("command-value");
+        promptText.mockResolvedValueOnce("dev"); // same as name, should delete from commandMap
+        await runFlavorCommand("edit");
+        expect(writeConfig).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            flavors: {
+                android: expect.not.objectContaining({
+                    commandMap: expect.any(Object)
+                })
+            }
+        }));
+    });
+
+    it("handles remove and deletes commandMap if empty", async () => {
+        const configWithSingleCommandMap = {
+            projectName: "Test",
+            flavors: {
+                android: { options: ["dev", "prod"], default: "prod", commandMap: { dev: "DevTask" } }
+            }
+        };
+        loadConfig.mockImplementation(() => Promise.resolve(JSON.parse(JSON.stringify(configWithSingleCommandMap))));
+        promptConfirm.mockResolvedValueOnce(true);
+        await runFlavorCommand("remove", "android", "dev");
+        expect(writeConfig).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            flavors: {
+                android: expect.not.objectContaining({
+                    commandMap: expect.any(Object)
+                })
+            }
+        }));
     });
   });
 });

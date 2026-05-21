@@ -95,26 +95,18 @@ describe("release command", () => {
     });
   });
 
-  it("runs a full release for android", async () => {
+  it.each([
+    { platform: "android", expected: "android" },
+    { platform: "ios", expected: "ios" }
+  ])("runs a full release for $platform", async ({ platform, expected }) => {
     const result = await runReleaseCommand({
       env: "prod",
-      platform: "android",
+      platform: platform as any,
       type: "store",
       ci: true
     });
     expect(result.status).toBe("success");
-    expect(execa).toHaveBeenCalled();
-  });
-
-  it("runs a full release for ios", async () => {
-    const result = await runReleaseCommand({
-      env: "prod",
-      platform: "ios",
-      type: "store",
-      ci: true
-    });
-    expect(result.status).toBe("success");
-    expect(execa).toHaveBeenCalled();
+    expect(execa).toHaveBeenCalledWith(expect.stringContaining(`fastlane ${expected}`), expect.any(Object));
   });
 
   it("handles dry run", async () => {
@@ -313,6 +305,35 @@ describe("release command", () => {
         rawLogs: true
       });
       expect(result.status).toBe("success");
+    });
+
+    it("throws on invalid platform, build type, or artifact in helpers", async () => {
+        const { asPlatform, asBuildType, asAndroidArtifact } = await import("../../commands/release.js") as any;
+        expect(() => asPlatform("invalid")).toThrow("Invalid platform");
+        expect(() => asBuildType("invalid")).toThrow("Invalid build type");
+        expect(() => asAndroidArtifact("invalid")).toThrow("Invalid Android artifact");
+    });
+
+    it("resolves flavor values correctly", async () => {
+        const { resolveFlavorValue } = await import("../../commands/release.js") as any;
+        expect(resolveFlavorValue(undefined, undefined)).toBe("");
+        expect(resolveFlavorValue({ dev: "DevTask" }, "dev")).toBe("DevTask");
+    });
+
+    it("handles artifacts with multiple Info.plist and native files", async () => {
+        writeRuntimeEnvExports.mockResolvedValueOnce({
+            runtimeEnvFilePath: "env",
+            androidJsonPath: "json",
+            androidXmlPath: "xml",
+            iosInfoPlistPaths: ["plist1", "plist2"]
+        });
+        const result = await runReleaseCommand({
+            env: "prod",
+            platform: "ios",
+            type: "store",
+            ci: true
+        });
+        expect(result.status).toBe("success");
     });
   });
 });

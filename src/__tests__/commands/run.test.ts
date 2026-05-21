@@ -264,6 +264,33 @@ describe("run command", () => {
         ci: true
       });
       expect(result.status).toBe("success");
+      expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-ios"), expect.any(Object));
+    });
+
+    it("covers iOS compiler error summarizer branches", async () => {
+        const { summarizeIosCompilerError } = await import("../../commands/run.js") as any;
+        expect(summarizeIosCompilerError(" -c /path/file.swift error: message")).toBe("message (file.swift)");
+        expect(summarizeIosCompilerError(" error: message")).toBe("message");
+        expect(summarizeIosCompilerError(" -c /path/file.swift error -flag")).toBe("-flag (file.swift)");
+        expect(summarizeIosCompilerError(" error -flag")).toBe("-flag");
+        expect(summarizeIosCompilerError(" -c /path/file.swift error multi-word-error")).toBe("multi-word-error (file.swift)");
+        expect(summarizeIosCompilerError(" error multi-word-error")).toBe("multi-word-error");
+    });
+
+    it("handles multiple updated Info.plist and native files in run output", async () => {
+        writeRuntimeEnvExports.mockResolvedValueOnce({
+            runtimeEnvFilePath: "env",
+            runtimeWrapperPath: "wrapper",
+            androidJsonPath: "json",
+            androidXmlPath: "xml",
+            iosInfoPlistPaths: ["plist1", "plist2"]
+        });
+        const result = await runAppCommand({
+            env: "dev",
+            platform: "android",
+            ci: true
+        });
+        expect(result.status).toBe("success");
     });
   });
 });
