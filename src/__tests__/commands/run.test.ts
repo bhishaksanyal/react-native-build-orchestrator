@@ -85,7 +85,7 @@ describe("run command", () => {
       ci: true
     });
     expect(result.status).toBe("success");
-    expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-android"), expect.any(Object));
+    expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-android"), expect.any(Array), expect.any(Object));
   });
 
   it("runs ios app", async () => {
@@ -95,7 +95,7 @@ describe("run command", () => {
       ci: true
     });
     expect(result.status).toBe("success");
-    expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-ios"), expect.any(Object));
+    expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-ios"), expect.any(Array), expect.any(Object));
   });
 
   it("handles flavor", async () => {
@@ -112,7 +112,7 @@ describe("run command", () => {
           ci: true
       });
       expect(result.status).toBe("success");
-      expect(execa).toHaveBeenCalledWith(expect.stringContaining("--mode PaidDebug"), expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(expect.stringContaining("--mode PaidDebug"), expect.any(Array), expect.any(Object));
   });
 
   it("throws error if default environment is missing", async () => {
@@ -193,7 +193,7 @@ describe("run command", () => {
         ci: true
       });
       expect(result.status).toBe("success");
-      expect(execa).toHaveBeenCalledWith(expect.stringContaining("--no-packager"), expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(expect.stringContaining("--no-packager"), expect.any(Array), expect.any(Object));
     });
 
     it("covers styleAndroidLine stdout styling branches", async () => {
@@ -263,7 +263,7 @@ describe("run command", () => {
         ci: true
       });
       expect(result.status).toBe("success");
-      expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-ios"), expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(expect.stringContaining("run-ios"), expect.any(Array), expect.any(Object));
     });
 
     it("covers iOS compiler error summarizer branches", async () => {
