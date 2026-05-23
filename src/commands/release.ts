@@ -83,12 +83,14 @@ function styleLine(line: string): string {
 
 async function releaseCommandWithLogs(params: {
   command: string;
+  args: string[];
   cwd: string;
   env: Record<string, string | undefined>;
   rawLogs: boolean;
 }): Promise<void> {
   const { exitCode } = await runCommandWithLogs({
     command: params.command,
+    args: params.args,
     cwd: params.cwd,
     env: params.env,
     rawLogs: params.rawLogs,
@@ -433,16 +435,15 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   }
   commandParts.push(toFastlaneOption("artifact_path", resolvedArtifactPath));
 
-  const uploadCommand = interpolate(
-    commandParts.join(" "),
-    uploadMergedVars
-  );
+  const interpolatedParts = commandParts.map((part) => interpolate(part, uploadMergedVars));
+  const [uploadCommand, ...uploadArgs] = interpolatedParts;
+  const uploadCommandDisplay = [uploadCommand, ...uploadArgs].join(" ");
 
   log(pc.bold(pc.cyan("Upload Phase")));
   log(pc.gray(`Lane: ${selectedLane}`));
   log(pc.gray(`Track: ${selectedTrack}`));
   log(pc.gray(`Artifact: ${resolvedArtifactPath}`));
-  log(pc.gray(`Command: ${uploadCommand}`));
+  log(pc.gray(`Command: ${uploadCommandDisplay}`));
   log("");
 
   if (!options.ci) {
@@ -462,6 +463,7 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   try {
     await releaseCommandWithLogs({
       command: uploadCommand,
+      args: uploadArgs,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
       env: {
