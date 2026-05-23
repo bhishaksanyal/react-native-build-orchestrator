@@ -3,6 +3,7 @@ import { log } from "./logger.js";
 
 export interface RunWithLogsParams {
   command: string;
+  args?: string[];
   cwd: string;
   env: Record<string, string | undefined>;
   rawLogs: boolean;
@@ -33,9 +34,9 @@ function emitOutput(params: RunWithLogsParams, text: string): void {
 export async function runCommandWithLogs(
   params: RunWithLogsParams
 ): Promise<RunWithLogsResult> {
-  const child = execa(params.command, {
+  const child = execa(params.command, params.args ?? [], {
     cwd: params.cwd,
-    shell: true,
+    shell: false,
     env: params.env,
     all: true,
     reject: false
