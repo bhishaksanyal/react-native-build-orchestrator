@@ -114,6 +114,14 @@ describe("flavor detection", () => {
     expect(config?.options).toContain("kotlinFlavor");
   });
 
+  it("handles empty product flavors block", async () => {
+    fs.pathExists.mockResolvedValue(true);
+    fs.readFile.mockResolvedValue('productFlavors {\n }');
+
+    const config = await detectAndroidFlavors("/app");
+    expect(config).toBeUndefined();
+  });
+
   it("ios detection falls back to project names if no schemes found", async () => {
       fs.pathExists.mockImplementation(async (p: string) => {
           if (p.endsWith("ios")) return true;
@@ -159,5 +167,30 @@ describe("flavor detection", () => {
       fs.readdir.mockResolvedValue([]); // No files at all
       const config = await detectIosSchemes("/app");
       expect(config).toBeUndefined();
+  });
+
+  it("collectFiles handles non-existent subdirectory", async () => {
+      fs.pathExists.mockImplementation(async (p: string) => {
+          if (p.endsWith("ios")) return true;
+          if (p.includes("MissingDir")) return false;
+          return true;
+      });
+      fs.readdir.mockImplementation((p: string) => {
+          if (p.endsWith("ios")) {
+              return Promise.resolve([
+                  { name: "MissingDir", isDirectory: () => true } as any,
+                  { name: "ExistingDir", isDirectory: () => true } as any
+              ]);
+          }
+          if (p.endsWith("ExistingDir")) {
+              return Promise.resolve([
+                  { name: "Scheme.xcscheme", isDirectory: () => false } as any
+              ]);
+          }
+          return Promise.resolve([]);
+      });
+
+      const config = await detectIosSchemes("/app");
+      expect(config?.options).toContain("Scheme");
   });
 });

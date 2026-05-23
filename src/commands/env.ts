@@ -47,7 +47,7 @@ async function loadConfigForEnvCommand(cwd: string): Promise<LoadedConfig> {
     const configPath = path.join(cwd, CONFIG_FILE);
     const exists = await fs.pathExists(configPath);
     if (!exists) {
-      throw error;
+      throw new Error(`Config file not found: ${configPath}`);
     }
 
     const rawContent = await fs.readFile(configPath, "utf8");

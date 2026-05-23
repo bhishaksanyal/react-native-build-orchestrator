@@ -267,4 +267,7 @@ program
     });
   });
 
-void program.parseAsync(process.argv);
+program.parseAsync(process.argv).catch((err: Error) => {
+  console.error(pc.red(`Fatal error: ${err.message}`));
+  process.exitCode = 1;
+});

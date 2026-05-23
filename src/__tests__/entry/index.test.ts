@@ -195,4 +195,16 @@ describe("CLI entry point", () => {
       stdoutSpy.mockRestore();
       logSpy.mockRestore();
   });
+
+  it("handles parseAsync rejection", async () => {
+      const errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+      const { program } = await import("commander") as any;
+      program.parseAsync.mockRejectedValueOnce(new Error("parse failed"));
+
+      await import(`../../index.js?t=parse_fail&v=${Date.now()}`);
+
+      expect(errSpy).toHaveBeenCalledWith(expect.stringContaining("parse failed"));
+      errSpy.mockRestore();
+  });
 });

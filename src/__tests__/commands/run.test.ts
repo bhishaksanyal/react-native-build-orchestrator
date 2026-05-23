@@ -292,5 +292,27 @@ describe("run command", () => {
         });
         expect(result.status).toBe("success");
     });
+
+    it("covers interactive select for env and platform", async () => {
+        promptSelect.mockReset();
+        promptSelect.mockResolvedValueOnce("dev");
+        promptSelect.mockResolvedValueOnce("android");
+        const result = await runAppCommand({ ci: true });
+        expect(result.status).toBe("success");
+    });
+
+    it("covers interactive flavor select", async () => {
+        loadConfig.mockResolvedValue({
+            ...mockConfig,
+            flavors: { android: { options: ["free", "paid"], default: "free" } }
+        });
+        promptSelect.mockReset();
+        promptSelect.mockResolvedValueOnce("dev");
+        promptSelect.mockResolvedValueOnce("android");
+        promptSelect.mockResolvedValueOnce("paid");
+        const result = await runAppCommand({ ci: true });
+        expect(result.status).toBe("success");
+    });
+
   });
 });

@@ -308,14 +308,14 @@ describe("release command", () => {
     });
 
     it("throws on invalid platform, build type, or artifact in helpers", async () => {
-        const { asPlatform, asBuildType, asAndroidArtifact } = await import("../../commands/release.js") as any;
+        const { asPlatform, asBuildType, asAndroidArtifact } = await import("../../utils/command-helpers.js") as any;
         expect(() => asPlatform("invalid")).toThrow("Invalid platform");
         expect(() => asBuildType("invalid")).toThrow("Invalid build type");
         expect(() => asAndroidArtifact("invalid")).toThrow("Invalid Android artifact");
     });
 
     it("resolves flavor values correctly", async () => {
-        const { resolveFlavorValue } = await import("../../commands/release.js") as any;
+        const { resolveFlavorValue } = await import("../../utils/command-helpers.js") as any;
         expect(resolveFlavorValue(undefined, undefined)).toBe("");
         expect(resolveFlavorValue({ dev: "DevTask" }, "dev")).toBe("DevTask");
     });
@@ -335,5 +335,78 @@ describe("release command", () => {
         });
         expect(result.status).toBe("success");
     });
+
+    it("covers interactive flavor select in release", async () => {
+        const configWithFlavors = {
+            ...mockConfig,
+            flavors: { android: { options: ["free", "paid"], default: "free" } }
+        };
+        loadConfig.mockResolvedValueOnce(configWithFlavors);
+        promptSelect.mockReset();
+        promptSelect.mockResolvedValueOnce("prod");     // env
+        promptSelect.mockResolvedValueOnce("android");  // platform
+        promptSelect.mockResolvedValueOnce("free");     // flavor (comes before type)
+        promptSelect.mockResolvedValueOnce("store");    // type
+        promptSelect.mockResolvedValueOnce("bundle");   // artifact
+        promptSelect.mockResolvedValueOnce("internal"); // track
+        const result = await runReleaseCommand({ ci: true });
+        expect(result.status).toBe("success");
+    });
+
+    it("covers androidArtifact from options in release", async () => {
+        const result = await runReleaseCommand({
+            env: "prod",
+            platform: "android",
+            type: "store",
+            androidArtifact: "bundle",
+            ci: true,
+            artifactPath: "path/to/artifact"
+        });
+        expect(result.status).toBe("success");
+    });
+
+    it("covers androidArtifact from buildTarget config", async () => {
+        const configWithArtifact = JSON.parse(JSON.stringify(mockConfig));
+        configWithArtifact.builds.store.android.androidArtifact = "bundle";
+        loadConfig.mockResolvedValueOnce(configWithArtifact);
+        const result = await runReleaseCommand({
+            env: "prod",
+            platform: "android",
+            type: "store",
+            ci: true
+        });
+        expect(result.status).toBe("success");
+    });
+
+    it("covers flavor logging in release output", async () => {
+        const configWithFlavors = {
+            ...mockConfig,
+            flavors: { android: { options: ["free", "paid"], default: "free" } }
+        };
+        loadConfig.mockResolvedValueOnce(configWithFlavors);
+        const result = await runReleaseCommand({
+            env: "prod",
+            platform: "android",
+            type: "store",
+            flavor: "free",
+            ci: true
+        });
+        expect(result.status).toBe("success");
+    });
+
+    it("throws when environment is not configured in release", async () => {
+        loadConfig.mockResolvedValueOnce({
+            ...mockConfig,
+            environments: { dev: { vars: {} } },
+            defaultEnvironment: "dev"
+        });
+        await expect(runReleaseCommand({
+            env: "nonexistent",
+            platform: "android",
+            type: "store",
+            ci: true
+        })).rejects.toThrow("not configured");
+    });
+
   });
 });

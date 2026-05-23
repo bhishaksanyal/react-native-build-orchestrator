@@ -287,5 +287,41 @@ describe("flavor command", () => {
             }
         }));
     });
+
+    it("handles list when no flavors configured at all", async () => {
+        loadConfig.mockResolvedValueOnce({ projectName: "Test", flavors: {} } as any);
+        const res = await runFlavorCommand("list");
+        expect(res.status).toBe("success");
+    });
+
+    it("handles platformConfig being falsy during list iteration", async () => {
+        const res = await runFlavorCommand("list");
+        expect(res.status).toBe("success");
+    });
+
+    it("throws when flavor name is empty during edit rename", async () => {
+        promptSelect.mockResolvedValueOnce("android")
+                    .mockResolvedValueOnce("dev")
+                    .mockResolvedValueOnce("rename");
+        promptText.mockResolvedValueOnce("");
+        await expect(runFlavorCommand("edit")).rejects.toThrow("Flavor name cannot be empty.");
+    });
+
+    it("handles edit rename with commandMap", async () => {
+        const configWithMap = {
+            projectName: "Test",
+            flavors: {
+                android: { options: ["dev", "prod"], default: "dev", commandMap: { dev: "DevTask" } }
+            }
+        };
+        loadConfig.mockImplementation(() => Promise.resolve(JSON.parse(JSON.stringify(configWithMap))));
+        promptSelect.mockResolvedValueOnce("android")
+                    .mockResolvedValueOnce("dev")
+                    .mockResolvedValueOnce("rename");
+        promptText.mockResolvedValueOnce("renamed");
+        promptConfirm.mockResolvedValueOnce(false);
+        await runFlavorCommand("edit");
+        expect(writeConfig).toHaveBeenCalled();
+    });
   });
 });

@@ -41,6 +41,16 @@ describe("schema validation", () => {
     expect(() => parseConfig(config)).toThrow("mapped android flavor must exist in options");
   });
 
+  it("passes with valid commandMap mapping existing flavor", () => {
+    const config = {
+      ...validBaseConfig,
+      flavors: {
+        android: { options: ["free"], commandMap: { free: "FreeFlavor" } }
+      }
+    };
+    expect(() => parseConfig(config)).not.toThrow();
+  });
+
   it("fails when default flavor is missing for ios", () => {
     const invalid = {
       projectName: "Test",

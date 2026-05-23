@@ -285,7 +285,7 @@ describe("env command", () => {
 
     it("unwraps cancelled symbol as throw", async () => {
         const CANCEL_VAL = Symbol("CANCEL");
-        isCancel.mockImplementation((val) => val === CANCEL_VAL);
+        isCancel.mockImplementation((val: any) => val === CANCEL_VAL);
         select.mockResolvedValueOnce(CANCEL_VAL);
         const res = await runEnvCommand("view");
         expect(res.status).toBe("cancelled");
@@ -296,6 +296,12 @@ describe("env command", () => {
         fs.pathExists.mockResolvedValueOnce(true);
         fs.readFile.mockResolvedValueOnce(""); // Empty file -> null from yaml.load
         await expect(runEnvCommand("list")).rejects.toThrow("load failed");
+    });
+
+    it("handles loadConfigForEnvCommand when config file does not exist", async () => {
+        loadConfig.mockRejectedValueOnce(new Error("load failed"));
+        fs.pathExists.mockResolvedValueOnce(false);
+        await expect(runEnvCommand("list")).rejects.toThrow("Config file not found");
     });
 
     it("handles add environment and it becomes default automatically if it is the first one", async () => {

@@ -131,6 +131,11 @@ describe("init command", () => {
       expect(result.platforms).toContain("ios");
     });
 
+    it("uses explicit project name when provided", async () => {
+        const result = await runInitCommand({ force: true, projectName: "ExplicitName" });
+        expect(result.projectName).toBe("ExplicitName");
+    });
+
     it("detectProjectName fallbacks to directory name if package.json is invalid", async () => {
         fs.pathExists.mockImplementation(async (p: string) => {
             if (p.endsWith("ios")) return false;

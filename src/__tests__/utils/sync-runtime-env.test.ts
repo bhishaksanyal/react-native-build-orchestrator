@@ -60,4 +60,18 @@ describe("sync runtime env", () => {
       expect(readDotEnv).not.toHaveBeenCalled();
       expect(writeRuntimeEnvExports).toHaveBeenCalled();
   });
+
+  it("handles environment without vars", async () => {
+      const configNoVars = {
+          ...MOCK_CONFIG,
+          environments: {
+              novars: { envFile: ".env" }
+          }
+      };
+      const res = await syncRuntimeEnvFromConfig("/app", configNoVars as any, "novars");
+      expect(res).not.toBeNull();
+      expect(createRuntimeVars).toHaveBeenCalledWith(expect.objectContaining({
+          envConfigVars: {}
+      }));
+  });
 });

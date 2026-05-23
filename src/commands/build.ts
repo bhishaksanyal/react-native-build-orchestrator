@@ -8,6 +8,15 @@ import { execa } from "execa";
 import { loadConfig } from "../utils/config.js";
 import { interpolate, readDotEnv } from "../utils/env.js";
 import { createRuntimeVars, writeRuntimeEnvExports } from "../utils/runtime-exports.js";
+import { runCommandWithLogs } from "../utils/run-with-logs.js";
+import {
+  resolveFlavorValue,
+  toFlavorTaskName,
+  asAndroidArtifact,
+  asBuildType,
+  asPlatform,
+  resolveAndroidOutputHint
+} from "../utils/command-helpers.js";
 import {
   BUILD_TYPES,
   PLATFORMS,
@@ -16,8 +25,6 @@ import {
   type Platform,
   type BuildSummary
 } from "../types.js";
-
-const ANDROID_ARTIFACTS: AndroidArtifact[] = ["apk", "bundle"];
 
 interface BuildOptions {
   env?: string;
@@ -30,32 +37,6 @@ interface BuildOptions {
   ci?: boolean;
   fast?: boolean;
   rawLogs?: boolean;
-}
-
-export function resolveFlavorValue(
-  commandMap: Record<string, string> | undefined,
-  selectedFlavor: string | undefined
-): string {
-  if (!selectedFlavor) {
-    return "";
-  }
-
-  return commandMap?.[selectedFlavor] ?? selectedFlavor;
-}
-
-export function asAndroidArtifact(input: string): AndroidArtifact {
-  if (!ANDROID_ARTIFACTS.includes(input as AndroidArtifact)) {
-    throw new Error(`Invalid Android artifact '${input}'. Use: ${ANDROID_ARTIFACTS.join(", ")}`);
-  }
-  return input as AndroidArtifact;
-}
-
-function toFlavorTaskName(flavor: string): string {
-  return flavor
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
 }
 
 export function applyAndroidArtifactToCommand(
@@ -143,42 +124,6 @@ export function applyIosFlavorToCommand(command: string, schemeName: string): st
   }
 
   return `${command} -scheme ${schemeName}`;
-}
-
-export function resolveAndroidOutputHint(
-  outputHint: string | undefined,
-  buildType: BuildType,
-  artifact: AndroidArtifact
-): string | undefined {
-  if (!outputHint || buildType === "development") {
-    return outputHint;
-  }
-
-  if (artifact === "apk") {
-    return outputHint
-      .replace("/outputs/bundle/", "/outputs/apk/")
-      .replace(/\.aab$/i, ".apk")
-      .replace("app-release.aab", "app-release.apk");
-  }
-
-  return outputHint
-    .replace("/outputs/apk/", "/outputs/bundle/")
-    .replace(/\.apk$/i, ".aab")
-    .replace("app-release.apk", "app-release.aab");
-}
-
-function asBuildType(input: string): BuildType {
-  if (!BUILD_TYPES.includes(input as BuildType)) {
-    throw new Error(`Invalid build type '${input}'. Use: ${BUILD_TYPES.join(", ")}`);
-  }
-  return input as BuildType;
-}
-
-function asPlatform(input: string): Platform {
-  if (!PLATFORMS.includes(input as Platform)) {
-    throw new Error(`Invalid platform '${input}'. Use: ${PLATFORMS.join(", ")}`);
-  }
-  return input as Platform;
 }
 
 function looksLikePath(value: string): boolean {
@@ -315,56 +260,18 @@ async function runBuildWithLogs(params: {
   await fs.ensureDir(logsDir);
   const logPath = path.join(logsDir, `build-${Date.now()}.log`);
 
-  const child = execa(params.command, {
+  const { rawLines, exitCode } = await runCommandWithLogs({
+    command: params.command,
     cwd: params.cwd,
-    shell: true,
     env: params.env,
-    all: true,
-    reject: false
+    rawLogs: params.rawLogs,
+    styler: params.rawLogs ? undefined : stylePrettyLine
   });
 
-  let pending = "";
-  let rawLog = "";
-
-  if (child.all) {
-    for await (const chunk of child.all) {
-      const text = chunk.toString();
-      rawLog += text;
-      pending += text;
-
-      while (pending.includes("\n")) {
-        const newlineIndex = pending.indexOf("\n");
-        const line = pending.slice(0, newlineIndex).replace(/\r$/, "");
-        pending = pending.slice(newlineIndex + 1);
-
-        if (params.rawLogs) {
-          log(line);
-        } else {
-          const styled = stylePrettyLine(line);
-          if (styled) {
-            log(styled);
-          }
-        }
-      }
-    }
-  }
-
-  if (pending.trim()) {
-    rawLog += `${pending}\n`;
-    if (params.rawLogs) {
-      log(pending);
-    } else {
-      const styled = stylePrettyLine(pending);
-      if (styled) {
-        log(styled);
-      }
-    }
-  }
-
+  const rawLog = rawLines.join("\n");
   await fs.writeFile(logPath, rawLog, "utf8");
 
-  const result = await child;
-  if (result.exitCode !== 0) {
+  if (exitCode !== 0) {
     throw new Error(`Build command failed. Full logs: ${logPath}`);
   }
 
@@ -445,6 +352,9 @@ export async function runBuildCommand(options: BuildOptions): Promise<BuildSumma
   }
 
   const profile = config.builds[selectedType as BuildType];
+  if (!profile) {
+    throw new Error(`Build profile not found for type '${selectedType}'.`);
+  }
   const target = profile[selectedPlatform as Platform];
   if (!target || !target.enabled || !target.command) {
     throw new Error(

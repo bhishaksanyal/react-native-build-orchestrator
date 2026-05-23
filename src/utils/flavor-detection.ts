@@ -30,14 +30,9 @@ function extractNamedBlock(contents: string, blockName: string): string | undefi
   return undefined;
 }
 
-function uniqueSorted(values: string[], preferred?: string): string[] {
+function uniqueSorted(values: string[]): string[] {
   const deduped = Array.from(new Set(values.filter(Boolean)));
   deduped.sort((left, right) => left.localeCompare(right));
-
-  if (preferred && deduped.includes(preferred)) {
-    return [preferred, ...deduped.filter((value) => value !== preferred)];
-  }
-
   return deduped;
 }
 
@@ -63,7 +58,7 @@ export async function detectAndroidFlavors(projectDir: string): Promise<FlavorPl
       ...flavorsBlock.matchAll(/create\s*\(\s*["']([^"']+)["']\s*\)\s*\{/gm)
     ];
 
-    const detected = uniqueSorted(matches.map((match) => match[1]), "flavorDefault");
+    const detected = uniqueSorted(matches.map((match) => match[1]));
     if (detected.length > 0) {
       return {
         options: detected,
@@ -103,7 +98,6 @@ async function collectFiles(dirPath: string, predicate: (fileName: string) => bo
 
 export async function detectIosSchemes(
   projectDir: string,
-  projectName?: string
 ): Promise<FlavorPlatformConfig | undefined> {
   const iosDir = path.join(projectDir, "ios");
   if (!(await fs.pathExists(iosDir))) {
@@ -112,8 +106,7 @@ export async function detectIosSchemes(
 
   const schemeFiles = await collectFiles(iosDir, (fileName) => fileName.endsWith(".xcscheme"));
   const schemeNames = uniqueSorted(
-    schemeFiles.map((filePath) => path.basename(filePath, ".xcscheme")),
-    projectName
+    schemeFiles.map((filePath) => path.basename(filePath, ".xcscheme"))
   );
 
   if (schemeNames.length > 0) {
@@ -125,8 +118,7 @@ export async function detectIosSchemes(
 
   const xcodeProjects = await collectFiles(iosDir, (fileName) => fileName.endsWith(".xcodeproj"));
   const projectNames = uniqueSorted(
-    xcodeProjects.map((filePath) => path.basename(filePath, ".xcodeproj")),
-    projectName
+    xcodeProjects.map((filePath) => path.basename(filePath, ".xcodeproj"))
   );
 
   if (projectNames.length > 0) {

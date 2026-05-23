@@ -125,7 +125,7 @@ export async function runInitCommand(options: { force: boolean; projectName?: st
     : Object.keys(config.environments)[0];
 
   const androidFlavors = await detectAndroidFlavors(cwd);
-  const iosFlavors = await detectIosSchemes(cwd, projectName);
+  const iosFlavors = await detectIosSchemes(cwd);
 
   if (androidFlavors || iosFlavors) {
     config.flavors = {

@@ -232,7 +232,8 @@ describe("build command", () => {
         return false;
       });
       fs.stat.mockResolvedValueOnce({ isDirectory: () => false } as any);
-      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+      const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+      expect(res.status).toBe("success");
     });
 
     it("covers resolveOutputFolder when path is file", async () => {
@@ -243,7 +244,8 @@ describe("build command", () => {
       fs.pathExists.mockResolvedValue(true);
       fs.stat.mockResolvedValue({ isDirectory: () => false } as any);
 
-      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+      const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+      expect(res.status).toBe("success");
     });
 
     it("covers openFolder for different platforms", async () => {
@@ -275,13 +277,15 @@ describe("build command", () => {
       const configAndroidGradle = JSON.parse(JSON.stringify(MOCK_CONFIG));
       configAndroidGradle.builds.store.android.command = "./gradlew assembleDebug";
       loadConfig.mockResolvedValueOnce(configAndroidGradle);
-      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, fast: true });
+      let res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, fast: true });
+      expect(res.status).toBe("success");
 
       // iOS xcodebuild flags
       const configIosXcode = JSON.parse(JSON.stringify(MOCK_CONFIG));
       configIosXcode.builds.store.ios.command = "xcodebuild build";
       loadConfig.mockResolvedValueOnce(configIosXcode);
-      await runBuildCommand({ platform: "ios", type: "store", env: "prod", ci: true, fast: true });
+      res = await runBuildCommand({ platform: "ios", type: "store", env: "prod", ci: true, fast: true });
+      expect(res.status).toBe("success");
     });
 
     it("covers template bypass in commands", async () => {
@@ -289,20 +293,22 @@ describe("build command", () => {
       configBypass.builds.store.android.command = "gradlew assembleDebug {{ANDROID_ARTIFACT}} {{FLAVOR}}";
       configBypass.builds.store.ios.command = "xcodebuild -scheme {{FLAVOR}}";
       loadConfig.mockResolvedValueOnce(configBypass);
-      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, flavor: "free" });
+      const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, flavor: "free" });
+      expect(res.status).toBe("success");
     });
 
     it("covers rawLogs enabled", async () => {
-      await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, rawLogs: true });
+      const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, rawLogs: true });
+      expect(res.status).toBe("success");
     });
 
     it("throws on invalid Android artifact in helper", async () => {
-        const { asAndroidArtifact } = await import("../../commands/build.js") as any;
+        const { asAndroidArtifact } = await import("../../utils/command-helpers.js") as any;
         expect(() => asAndroidArtifact("invalid")).toThrow("Invalid Android artifact");
     });
 
     it("resolves flavor values correctly", async () => {
-        const { resolveFlavorValue } = await import("../../commands/build.js") as any;
+        const { resolveFlavorValue } = await import("../../utils/command-helpers.js") as any;
         expect(resolveFlavorValue(undefined, undefined)).toBe("");
         expect(resolveFlavorValue({ dev: "DevFlavor" }, "dev")).toBe("DevFlavor");
         expect(resolveFlavorValue({ dev: "DevFlavor" }, "prod")).toBe("prod");
@@ -321,7 +327,7 @@ describe("build command", () => {
     });
 
     it("covers resolveAndroidOutputHint replacements", async () => {
-        const { resolveAndroidOutputHint } = await import("../../commands/build.js") as any;
+        const { resolveAndroidOutputHint } = await import("../../utils/command-helpers.js") as any;
         expect(resolveAndroidOutputHint("/outputs/bundle/app.aab", "store", "apk")).toBe("/outputs/apk/app.apk");
     });
 
@@ -353,6 +359,65 @@ describe("build command", () => {
         expect(stylePrettyLine("BUILD SUCCESSFUL")).toContain("BUILD SUCCESSFUL");
         expect(stylePrettyLine("> Task :app:assemble")).toContain("> Task");
         expect(stylePrettyLine("warning: something")).toContain("warning:");
+        expect(stylePrettyLine("Compile some/file.swift")).toContain("Compile");
+        expect(stylePrettyLine("Ld /path/to/binary")).toContain("Ld");
+        expect(stylePrettyLine("CodeSign some.app")).toContain("CodeSign");
+        expect(stylePrettyLine("PhaseScriptExecution script")).toContain("PhaseScriptExecution");
+        expect(stylePrettyLine("plain output")).toContain("plain output");
     });
+
+    it("covers applyIosFlavorToCommand when template vars ARE present", async () => {
+        const { applyIosFlavorToCommand } = await import("../../commands/build.js") as any;
+        expect(applyIosFlavorToCommand("xcodebuild {{FLAVOR_NAME}}", "MyScheme")).toBe("xcodebuild {{FLAVOR_NAME}}");
+        expect(applyIosFlavorToCommand("xcodebuild {{FLAVOR}}", "MyScheme")).toBe("xcodebuild {{FLAVOR}}");
+        expect(applyIosFlavorToCommand("xcodebuild {{FLAVOR_VALUE}}", "MyScheme")).toBe("xcodebuild {{FLAVOR_VALUE}}");
+        expect(applyIosFlavorToCommand("xcodebuild {{FLAVOR_TASK}}", "MyScheme")).toBe("xcodebuild {{FLAVOR_TASK}}");
+    });
+
+    it("covers resolveOutputFolder when path does not exist", async () => {
+        fs.pathExists.mockReset();
+        fs.pathExists.mockImplementation(async (p: string) => {
+            if (p.includes("logs")) return true;
+            return false;
+        });
+        const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+        expect(res.status).toBe("success");
+    });
+
+    it("covers augmentCommandForFastTrack non-matching platform", async () => {
+        loadConfig.mockResolvedValueOnce({ ...JSON.parse(JSON.stringify(MOCK_CONFIG)), builds: { store: { android: { enabled: true, command: "react-native bundle" }, ios: { enabled: true, command: "react-native bundle" } } } });
+        const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true, fast: true });
+        expect(res.status).toBe("success");
+    });
+
+    it("covers interactive select for env, type, and platform", async () => {
+        select.mockReset();
+        select.mockResolvedValueOnce("prod");
+        select.mockResolvedValueOnce("store");
+        select.mockResolvedValueOnce("android");
+        const res = await runBuildCommand({ ci: true });
+        expect(res.status).toBe("success");
+    });
+
+    it("throws when environment is not in config", async () => {
+        await expect(runBuildCommand({ env: "nonexistent", platform: "android", type: "store", ci: true })).rejects.toThrow("is not configured");
+    });
+
+    it("throws when build profile not found", async () => {
+        const configNoAdhoc = JSON.parse(JSON.stringify(MOCK_CONFIG));
+        delete configNoAdhoc.builds.adhoc;
+        loadConfig.mockResolvedValueOnce(configNoAdhoc);
+        await expect(runBuildCommand({ type: "adhoc", platform: "android", env: "prod", ci: true })).rejects.toThrow("Build profile not found");
+    });
+
+    it("covers android artifact else branch (no artifact specified, prompt for it)", async () => {
+        const configNoArtifact = JSON.parse(JSON.stringify(MOCK_CONFIG));
+        delete configNoArtifact.builds.store.android.androidArtifact;
+        loadConfig.mockResolvedValueOnce(configNoArtifact);
+        select.mockResolvedValueOnce("bundle");
+        const res = await runBuildCommand({ platform: "android", type: "store", env: "prod", ci: true });
+        expect(res.status).toBe("success");
+    });
+
   });
 });

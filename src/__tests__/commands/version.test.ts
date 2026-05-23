@@ -230,9 +230,9 @@ describe("version command", () => {
     });
 
     it("handles promptSelect return cancel in version target prompts", async () => {
-      select.mockResolvedValueOnce("all"); // Android target
-      select.mockResolvedValueOnce("__CANCEL__"); // iOS target cancellation or select cancel
-      isCancel.mockImplementation((v: any) => v === "__CANCEL__" || v === "all"); // Wait, let's keep isCancel mock simple:
+      select.mockResolvedValueOnce("all");
+      select.mockResolvedValueOnce("__CANCEL__");
+      await expect(runVersionCommand({ ci: false })).rejects.toThrow("Operation cancelled");
     });
 
     it("covers updatePbxprojBlock value missing branch", async () => {
@@ -259,6 +259,16 @@ describe("version command", () => {
             return true;
         });
         await expect(runVersionCommand({ platform: "ios", version: "2.0.0" })).rejects.toThrow("ios/ directory not found");
+    });
+
+    it("covers findBlockRange when braces never close", async () => {
+        fs.readFile.mockImplementation((p: string) => {
+            if (p.endsWith(".gradle") || p.endsWith(".gradle.kts")) {
+                return Promise.resolve('defaultConfig {');
+            }
+            return Promise.resolve("");
+        });
+        await expect(runVersionCommand({ platform: "android", version: "2.0.0" })).rejects.toThrow("Could not find defaultConfig block");
     });
   });
 });

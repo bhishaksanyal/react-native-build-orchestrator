@@ -339,7 +339,7 @@ async function handleDetect(cwd: string, config: LoadedConfig, platformArg?: str
   const platform = platformArg === "android" || platformArg === "ios" ? platformArg : undefined;
 
   const detectedAndroid = !platform || platform === "android" ? await detectAndroidFlavors(cwd) : undefined;
-  const detectedIos = !platform || platform === "ios" ? await detectIosSchemes(cwd, config.projectName) : undefined;
+  const detectedIos = !platform || platform === "ios" ? await detectIosSchemes(cwd) : undefined;
 
   if (!detectedAndroid && !detectedIos) {
     log(pc.yellow("No Android flavors or iOS schemes detected."));

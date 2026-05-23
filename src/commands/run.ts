@@ -1,11 +1,15 @@
 import path from "node:path";
 import pc from "picocolors";
 import { promptConfirm as confirm, promptSelect as select, intro, outro, log, isCancel } from "../utils/logger.js";
-import { execa } from "execa";
-
 import { loadConfig } from "../utils/config.js";
 import { interpolate, readDotEnv } from "../utils/env.js";
 import { createRuntimeVars, writeRuntimeEnvExports } from "../utils/runtime-exports.js";
+import { runCommandWithLogs } from "../utils/run-with-logs.js";
+import {
+  resolveFlavorValue,
+  toFlavorTaskName,
+  asPlatform
+} from "../utils/command-helpers.js";
 import { PLATFORMS, type Platform, type BuildSummary } from "../types.js";
 
 interface RunOptions {
@@ -26,32 +30,6 @@ class RunCommandError extends Error {
     this.name = "RunCommandError";
     this.hints = hints;
   }
-}
-
-function asPlatform(input: string): Platform {
-  if (!PLATFORMS.includes(input as Platform)) {
-    throw new Error(`Invalid platform '${input}'. Use: ${PLATFORMS.join(", ")}`);
-  }
-  return input as Platform;
-}
-
-function resolveFlavorValue(
-  commandMap: Record<string, string> | undefined,
-  selectedFlavor: string | undefined
-): string {
-  if (!selectedFlavor) {
-    return "";
-  }
-
-  return commandMap?.[selectedFlavor] ?? selectedFlavor;
-}
-
-function toFlavorTaskName(flavor: string): string {
-  return flavor
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
 }
 
 function buildRunCommand(params: {
@@ -233,56 +211,26 @@ function analyzeRunFailure(lines: string[], platform: Platform | "unknown"): str
   ];
 }
 
-async function runCommandWithLogs(params: {
+async function runAppWithLogs(params: {
   command: string;
   cwd: string;
   env: Record<string, string | undefined>;
   rawLogs: boolean;
   platform: Platform | "unknown";
 }): Promise<void> {
-  const child = execa(params.command, {
+  const styler = params.rawLogs
+    ? undefined
+    : (line: string) => styleRunLine(line, params.platform);
+
+  const { rawLines, exitCode } = await runCommandWithLogs({
+    command: params.command,
     cwd: params.cwd,
-    shell: true,
     env: params.env,
-    all: true,
-    reject: false
+    rawLogs: params.rawLogs,
+    styler
   });
 
-  let pending = "";
-  const rawLines: string[] = [];
-  if (child.all) {
-    for await (const chunk of child.all) {
-      const text = chunk.toString();
-      pending += text;
-
-      while (pending.includes("\n")) {
-        const newlineIndex = pending.indexOf("\n");
-        const line = pending.slice(0, newlineIndex).replace(/\r$/, "");
-        pending = pending.slice(newlineIndex + 1);
-        rawLines.push(line);
-
-        if (params.rawLogs) {
-          log(line);
-        } else {
-          const styled = styleRunLine(line, params.platform);
-          if (styled) log(styled);
-        }
-      }
-    }
-  }
-
-  if (pending.trim()) {
-    rawLines.push(pending);
-    if (params.rawLogs) {
-      log(pending);
-    } else {
-      const styled = styleRunLine(pending, params.platform);
-      if (styled) log(styled);
-    }
-  }
-
-  const result = await child;
-  if (result.exitCode !== 0) {
+  if (exitCode !== 0) {
     throw new RunCommandError(
       "Run command failed.",
       analyzeRunFailure(rawLines, params.platform)
@@ -400,7 +348,7 @@ export async function runAppCommand(options: RunOptions): Promise<BuildSummary> 
   log(pc.bold(pc.cyan(`\n  Starting ${selectedPlatform} debug build…`)));
   log(pc.gray(`  ${runCommand}\n`));
   try {
-    await runCommandWithLogs({
+    await runAppWithLogs({
       command: runCommand,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
