@@ -1,3 +1,16 @@
+## [1.5.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.4.0...v1.5.0) (2026-05-23)
+
+### ✨ Features
+
+* achieve high code coverage and establish robust test suite ([0ca4259](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/0ca4259cee4da029badd7754ca41a2daf765a857))
+
+### 🐛 Bug Fixes
+
+* apply CodeRabbit auto-fixes ([da14fdb](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/da14fdbb21d5751dd621443a476f73469e186ff1))
+* remove then property from execa mock objects to resolve SonarCloud S7739 ([848580c](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/848580c2794560a5a851ff0c1e46d560c60dceda))
+* replace /tmp/ paths with /app/ to resolve SonarCloud security hotspot ([74e1296](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/74e12969824290ce7906e683d9573678f60201f5))
+* update execa assertions to match 3-arg call signature from runCommandWithLogs ([dadbb3e](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/dadbb3ef3ea7d0c331f9f59bfbc55d286bacba52))
+
 ## [1.4.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.3.1...v1.4.0) (2026-05-11)
 
 ### ✨ Features
