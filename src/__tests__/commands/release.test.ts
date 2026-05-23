@@ -106,7 +106,7 @@ describe("release command", () => {
       ci: true
     });
     expect(result.status).toBe("success");
-    expect(execa).toHaveBeenCalledWith(expect.stringContaining(`fastlane ${expected}`), expect.any(Object));
+    expect(execa).toHaveBeenCalledWith(expect.stringContaining(`fastlane ${expected}`), expect.any(Array), expect.any(Object));
   });
 
   it("handles dry run", async () => {

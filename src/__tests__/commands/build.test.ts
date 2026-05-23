@@ -136,7 +136,7 @@ describe("build command", () => {
           exitCode: 0
       } as any);
       await runBuildCommand({ platform: "ios", type: "store", env: "prod" });
-      expect(execa).toHaveBeenCalledWith(expect.stringContaining("xcodebuild"), expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(expect.stringContaining("xcodebuild"), expect.any(Array), expect.any(Object));
   });
 
   describe("build command edge cases", () => {
