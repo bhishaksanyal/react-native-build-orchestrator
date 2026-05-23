@@ -1,0 +1,69 @@
+import { execa } from "execa";
+import { log } from "./logger.js";
+
+export interface RunWithLogsParams {
+  command: string;
+  args?: string[];
+  cwd: string;
+  env: Record<string, string | undefined>;
+  rawLogs: boolean;
+  styler?: (line: string) => string;
+  onLine?: (line: string) => void;
+}
+
+export interface RunWithLogsResult {
+  rawLines: string[];
+  exitCode: number;
+}
+
+function emitOutput(params: RunWithLogsParams, text: string): void {
+  if (params.onLine) {
+    params.onLine(text);
+  } else if (params.rawLogs) {
+    log(text);
+  } else if (params.styler) {
+    const styled = params.styler(text);
+    if (styled) {
+      log(styled);
+    }
+  } else {
+    log(text);
+  }
+}
+
+export async function runCommandWithLogs(
+  params: RunWithLogsParams
+): Promise<RunWithLogsResult> {
+  const child = execa(params.command, params.args ?? [], {
+    cwd: params.cwd,
+    shell: false,
+    env: params.env,
+    all: true,
+    reject: false
+  });
+
+  let pending = "";
+  const rawLines: string[] = [];
+
+  if (child.all) {
+    for await (const chunk of child.all) {
+      pending += chunk.toString();
+
+      while (pending.includes("\n")) {
+        const newlineIndex = pending.indexOf("\n");
+        const line = pending.slice(0, newlineIndex).replace(/\r$/, "");
+        pending = pending.slice(newlineIndex + 1);
+        rawLines.push(line);
+        emitOutput(params, line);
+      }
+    }
+  }
+
+  if (pending.trim()) {
+    rawLines.push(pending);
+    emitOutput(params, pending);
+  }
+
+  const result = await child;
+  return { rawLines, exitCode: result.exitCode ?? 0 };
+}

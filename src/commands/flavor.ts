@@ -10,13 +10,13 @@ import { createTable } from "../utils/ui.js";
 type FlavorAction = "list" | "add" | "edit" | "remove" | "set-default" | "detect";
 type LoadedConfig = Awaited<ReturnType<typeof loadConfig>>;
 
-const CANCELLED = "cancelled-by-user";
+const CANCELLED = "Operation cancelled";
 
 function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) {
     throw new Error(CANCELLED);
   }
-  return value;
+  return value as T;
 }
 
 function ensureFlavorPlatform(config: LoadedConfig, platform: Platform): FlavorPlatformConfig {
@@ -339,7 +339,7 @@ async function handleDetect(cwd: string, config: LoadedConfig, platformArg?: str
   const platform = platformArg === "android" || platformArg === "ios" ? platformArg : undefined;
 
   const detectedAndroid = !platform || platform === "android" ? await detectAndroidFlavors(cwd) : undefined;
-  const detectedIos = !platform || platform === "ios" ? await detectIosSchemes(cwd, config.projectName) : undefined;
+  const detectedIos = !platform || platform === "ios" ? await detectIosSchemes(cwd) : undefined;
 
   if (!detectedAndroid && !detectedIos) {
     log(pc.yellow("No Android flavors or iOS schemes detected."));

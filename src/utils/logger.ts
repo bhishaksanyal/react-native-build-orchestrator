@@ -59,8 +59,7 @@ export function printJson(data: unknown): void {
 
 export function checkCancel(value: unknown): boolean {
   if (isCancel(value)) {
-    outro(pc.yellow("Operation cancelled."));
-    process.exit(0);
+    throw new Error("Operation cancelled");
   }
   return false;
 }
@@ -71,8 +70,7 @@ export async function promptSelect<T = string>(options: Parameters<typeof select
   }
   const result = await select(options);
   if (isCancel(result)) {
-    outro(pc.yellow("Operation cancelled."));
-    process.exit(0);
+    throw new Error("Operation cancelled");
   }
   return result as T;
 }
@@ -83,8 +81,7 @@ export async function promptText(options: Parameters<typeof text>[0]): Promise<s
   }
   const result = await text(options);
   if (isCancel(result)) {
-    outro(pc.yellow("Operation cancelled."));
-    process.exit(0);
+    throw new Error("Operation cancelled");
   }
   return String(result);
 }
@@ -95,8 +92,7 @@ export async function promptConfirm(options: Parameters<typeof confirm>[0]): Pro
   }
   const result = await confirm(options);
   if (isCancel(result)) {
-    outro(pc.yellow("Operation cancelled."));
-    process.exit(0);
+    throw new Error("Operation cancelled");
   }
   return Boolean(result);
 }

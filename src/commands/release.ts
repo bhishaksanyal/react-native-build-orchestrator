@@ -8,6 +8,15 @@ import { runBuildCommand } from "./build.js";
 import { loadConfig } from "../utils/config.js";
 import { createRuntimeVars, writeRuntimeEnvExports } from "../utils/runtime-exports.js";
 import { interpolate, readDotEnv } from "../utils/env.js";
+import { runCommandWithLogs } from "../utils/run-with-logs.js";
+import {
+  resolveFlavorValue,
+  toFlavorTaskName,
+  asBuildType,
+  asPlatform,
+  asAndroidArtifact,
+  resolveAndroidOutputHint
+} from "../utils/command-helpers.js";
 import {
   BUILD_TYPES,
   PLATFORMS,
@@ -72,56 +81,23 @@ function styleLine(line: string): string {
   return pc.gray(`  ${trimmed}`);
 }
 
-async function runCommandWithLogs(params: {
+async function releaseCommandWithLogs(params: {
   command: string;
+  args: string[];
   cwd: string;
   env: Record<string, string | undefined>;
   rawLogs: boolean;
 }): Promise<void> {
-  const child = execa(params.command, {
+  const { exitCode } = await runCommandWithLogs({
+    command: params.command,
+    args: params.args,
     cwd: params.cwd,
-    shell: true,
     env: params.env,
-    all: true,
-    reject: false
+    rawLogs: params.rawLogs,
+    styler: params.rawLogs ? undefined : styleLine
   });
 
-  let pending = "";
-  if (child.all) {
-    for await (const chunk of child.all) {
-      const text = chunk.toString();
-      pending += text;
-
-      while (pending.includes("\n")) {
-        const newlineIndex = pending.indexOf("\n");
-        const line = pending.slice(0, newlineIndex).replace(/\r$/, "");
-        pending = pending.slice(newlineIndex + 1);
-
-        if (params.rawLogs) {
-          log(line);
-        } else {
-          const styled = styleLine(line);
-          if (styled) {
-            log(styled);
-          }
-        }
-      }
-    }
-  }
-
-  if (pending.trim()) {
-    if (params.rawLogs) {
-      log(pending);
-    } else {
-      const styled = styleLine(pending);
-      if (styled) {
-        log(styled);
-      }
-    }
-  }
-
-  const result = await child;
-  if (result.exitCode !== 0) {
+  if (exitCode !== 0) {
     throw new Error("Fastlane upload failed.");
   }
 }
@@ -139,67 +115,7 @@ async function resolveFastlaneRunner(projectDir: string): Promise<string> {
   }
 }
 
-function asPlatform(input: string): Platform {
-  if (!PLATFORMS.includes(input as Platform)) {
-    throw new Error(`Invalid platform '${input}'. Use: ${PLATFORMS.join(", ")}`);
-  }
-  return input as Platform;
-}
 
-function asBuildType(input: string): BuildType {
-  if (!BUILD_TYPES.includes(input as BuildType)) {
-    throw new Error(`Invalid build type '${input}'. Use: ${BUILD_TYPES.join(", ")}`);
-  }
-  return input as BuildType;
-}
-
-function asAndroidArtifact(input: string): AndroidArtifact {
-  if (input !== "apk" && input !== "bundle") {
-    throw new Error("Invalid Android artifact. Use: apk | bundle");
-  }
-  return input;
-}
-
-function resolveFlavorValue(
-  commandMap: Record<string, string> | undefined,
-  selectedFlavor: string | undefined
-): string {
-  if (!selectedFlavor) {
-    return "";
-  }
-
-  return commandMap?.[selectedFlavor] ?? selectedFlavor;
-}
-
-function toFlavorTaskName(flavor: string): string {
-  return flavor
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
-}
-
-function resolveAndroidOutputHint(
-  outputHint: string | undefined,
-  buildType: BuildType,
-  artifact: AndroidArtifact
-): string | undefined {
-  if (!outputHint || buildType === "development") {
-    return outputHint;
-  }
-
-  if (artifact === "apk") {
-    return outputHint
-      .replace("/outputs/bundle/", "/outputs/apk/")
-      .replace(/\.aab$/i, ".apk")
-      .replace("app-release.aab", "app-release.apk");
-  }
-
-  return outputHint
-    .replace("/outputs/apk/", "/outputs/bundle/")
-    .replace(/\.apk$/i, ".aab")
-    .replace("app-release.apk", "app-release.aab");
-}
 
 async function promptTrack(platform: Platform, defaultTrack: string): Promise<string> {
   if (platform === "android") {
@@ -519,16 +435,15 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   }
   commandParts.push(toFastlaneOption("artifact_path", resolvedArtifactPath));
 
-  const uploadCommand = interpolate(
-    commandParts.join(" "),
-    uploadMergedVars
-  );
+  const interpolatedParts = commandParts.map((part) => interpolate(part, uploadMergedVars));
+  const [uploadCommand, ...uploadArgs] = interpolatedParts;
+  const uploadCommandDisplay = [uploadCommand, ...uploadArgs].join(" ");
 
   log(pc.bold(pc.cyan("Upload Phase")));
   log(pc.gray(`Lane: ${selectedLane}`));
   log(pc.gray(`Track: ${selectedTrack}`));
   log(pc.gray(`Artifact: ${resolvedArtifactPath}`));
-  log(pc.gray(`Command: ${uploadCommand}`));
+  log(pc.gray(`Command: ${uploadCommandDisplay}`));
   log("");
 
   if (!options.ci) {
@@ -546,8 +461,9 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   const s = spinner();
   s.start(`Running fastlane ${platform} ${selectedLane}...`);
   try {
-    await runCommandWithLogs({
+    await releaseCommandWithLogs({
       command: uploadCommand,
+      args: uploadArgs,
       cwd: projectDir,
       rawLogs: Boolean(options.rawLogs),
       env: {
