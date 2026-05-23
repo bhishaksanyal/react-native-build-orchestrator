@@ -39,6 +39,17 @@ const { interpolate, readDotEnv } = await import("../../utils/env.js") as any;
 const { createRuntimeVars, writeRuntimeEnvExports } = await import("../../utils/runtime-exports.js") as any;
 const { execa } = await import("execa") as any;
 
+function mockExecaStream(lines: string[], exitCode = 0) {
+    execa.mockReturnValue({
+        all: (async function* () {
+            for (const line of lines) {
+                yield Buffer.from(line);
+            }
+        })(),
+        exitCode
+    });
+}
+
 describe("run command", () => {
   const mockConfig = {
     projectName: "MyApp",
@@ -64,10 +75,7 @@ describe("run command", () => {
       iosInfoPlistPaths: []
     });
 
-    execa.mockReturnValue({
-        all: (async function* () { yield Buffer.from("log line\n"); })(),
-        exitCode: 0
-    });
+    mockExecaStream(["log line\n"]);
   });
 
   it("runs android app", async () => {
@@ -113,13 +121,10 @@ describe("run command", () => {
   });
 
   it("handles failure with hints", async () => {
-      execa.mockReturnValue({
-          all: (async function* () {
-              yield Buffer.from("non-modular-include-in-framework-module\n");
-              yield Buffer.from("GeneratedDotEnv.m\n");
-          })(),
-          exitCode: 1
-      });
+      mockExecaStream([
+          "non-modular-include-in-framework-module\n",
+          "GeneratedDotEnv.m\n"
+      ], 1);
       await expect(runAppCommand({
           env: "dev",
           platform: "ios",
@@ -192,21 +197,18 @@ describe("run command", () => {
     });
 
     it("covers styleAndroidLine stdout styling branches", async () => {
-      execa.mockReturnValue({
-        all: (async function* () {
-          yield Buffer.from("BUILD SUCCESSFUL\n");
-          yield Buffer.from("BUILD FAILED\n");
-          yield Buffer.from("> Task :app:compile\n");
-          yield Buffer.from("12 actionable tasks\n");
-          yield Buffer.from("Installing APK...\n");
-          yield Buffer.from("Starting: Intent...\n");
-          yield Buffer.from("warning message\n");
-          yield Buffer.from("deprecated message\n");
-          yield Buffer.from("error message\n");
-          yield Buffer.from("\n");
-        })(),
-        exitCode: 0
-      });
+      mockExecaStream([
+          "BUILD SUCCESSFUL\n",
+          "BUILD FAILED\n",
+          "> Task :app:compile\n",
+          "12 actionable tasks\n",
+          "Installing APK...\n",
+          "Starting: Intent...\n",
+          "warning message\n",
+          "deprecated message\n",
+          "error message\n",
+          "\n"
+      ]);
 
       const result = await runAppCommand({
         env: "dev",
@@ -217,46 +219,43 @@ describe("run command", () => {
     });
 
     it("covers styleIosLine stdout styling branches", async () => {
-      execa.mockReturnValue({
-        all: (async function* () {
-          yield Buffer.from("- Building the app.\n");
-          yield Buffer.from("info A dev server is already running\n");
-          yield Buffer.from("info Found Xcode workspace \n");
-          yield Buffer.from("info Found booted \n");
-          yield Buffer.from("info Building (using \n");
-          yield Buffer.from("info Installing \n");
-          yield Buffer.from("info Launching \n");
-          yield Buffer.from("info general\n");
-          yield Buffer.from("** BUILD SUCCEEDED **\n");
-          yield Buffer.from("** BUILD FAILED **\n");
-          yield Buffer.from("=== BUILD TARGET my_app OF my_project WITH CONFIGURATION Debug ===\n");
-          yield Buffer.from("CompileSwift file.swift\n");
-          yield Buffer.from("CompileC file.c\n");
-          yield Buffer.from("SwiftDriver something\n");
-          yield Buffer.from("SwiftEmitModule something\n");
-          yield Buffer.from("Ld build/my_app\n");
-          yield Buffer.from("CodeSign my_app.app\n");
-          yield Buffer.from("PhaseScriptExecution compile_assets\n");
-          yield Buffer.from("Touch build/my_app\n");
-          yield Buffer.from("Installing app\n");
-          yield Buffer.from("Launching app\n");
-          yield Buffer.from("Metro bundle\n");
-          yield Buffer.from("error export \n");
-          yield Buffer.from("error VALIDATE_PRODUCT=\n");
-          yield Buffer.from("error export KEY=\n");
-          yield Buffer.from("error ./common-args.resp\n");
-          yield Buffer.from("source.swift:10:5: error: syntax error\n");
-          yield Buffer.from("source.swift:12:5: warning: check warning\n");
-          yield Buffer.from("source.swift:14:5: note: check note\n");
-          yield Buffer.from("error custom_msg\n");
-          yield Buffer.from("FAILED\n");
-          yield Buffer.from("warning\n");
-          yield Buffer.from("/absolute/path\n");
-          yield Buffer.from("CpResource resource\n");
-          yield Buffer.from("random line\n");
-        })(),
-        exitCode: 0
-      });
+      mockExecaStream([
+          "- Building the app.\n",
+          "info A dev server is already running\n",
+          "info Found Xcode workspace \n",
+          "info Found booted \n",
+          "info Building (using \n",
+          "info Installing \n",
+          "info Launching \n",
+          "info general\n",
+          "** BUILD SUCCEEDED **\n",
+          "** BUILD FAILED **\n",
+          "=== BUILD TARGET my_app OF my_project WITH CONFIGURATION Debug ===\n",
+          "CompileSwift file.swift\n",
+          "CompileC file.c\n",
+          "SwiftDriver something\n",
+          "SwiftEmitModule something\n",
+          "Ld build/my_app\n",
+          "CodeSign my_app.app\n",
+          "PhaseScriptExecution compile_assets\n",
+          "Touch build/my_app\n",
+          "Installing app\n",
+          "Launching app\n",
+          "Metro bundle\n",
+          "error export \n",
+          "error VALIDATE_PRODUCT=\n",
+          "error export KEY=\n",
+          "error ./common-args.resp\n",
+          "source.swift:10:5: error: syntax error\n",
+          "source.swift:12:5: warning: check warning\n",
+          "source.swift:14:5: note: check note\n",
+          "error custom_msg\n",
+          "FAILED\n",
+          "warning\n",
+          "/absolute/path\n",
+          "CpResource resource\n",
+          "random line\n"
+      ]);
 
       const result = await runAppCommand({
         env: "dev",
