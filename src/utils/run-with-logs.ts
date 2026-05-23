@@ -15,6 +15,21 @@ export interface RunWithLogsResult {
   exitCode: number;
 }
 
+function emitOutput(params: RunWithLogsParams, text: string): void {
+  if (params.onLine) {
+    params.onLine(text);
+  } else if (params.rawLogs) {
+    log(text);
+  } else if (params.styler) {
+    const styled = params.styler(text);
+    if (styled) {
+      log(styled);
+    }
+  } else {
+    log(text);
+  }
+}
+
 export async function runCommandWithLogs(
   params: RunWithLogsParams
 ): Promise<RunWithLogsResult> {
@@ -31,46 +46,21 @@ export async function runCommandWithLogs(
 
   if (child.all) {
     for await (const chunk of child.all) {
-      const text = chunk.toString();
-      pending += text;
+      pending += chunk.toString();
 
       while (pending.includes("\n")) {
         const newlineIndex = pending.indexOf("\n");
         const line = pending.slice(0, newlineIndex).replace(/\r$/, "");
         pending = pending.slice(newlineIndex + 1);
         rawLines.push(line);
-
-        if (params.onLine) {
-          params.onLine(line);
-        } else if (params.rawLogs) {
-          log(line);
-        } else if (params.styler) {
-          const styled = params.styler(line);
-          if (styled) {
-            log(styled);
-          }
-        } else {
-          log(line);
-        }
+        emitOutput(params, line);
       }
     }
   }
 
   if (pending.trim()) {
     rawLines.push(pending);
-
-    if (params.onLine) {
-      params.onLine(pending);
-    } else if (params.rawLogs) {
-      log(pending);
-    } else if (params.styler) {
-      const styled = params.styler(pending);
-      if (styled) {
-        log(styled);
-      }
-    } else {
-      log(pending);
-    }
+    emitOutput(params, pending);
   }
 
   const result = await child;
