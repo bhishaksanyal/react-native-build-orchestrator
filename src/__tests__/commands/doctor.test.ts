@@ -65,8 +65,8 @@ describe("doctor command", () => {
 
   it("handles custom cwd", async () => {
       fs.pathExists.mockResolvedValue(true);
-      const result = await runDoctorCommand("/tmp/test");
+      const result = await runDoctorCommand("/app/test");
       expect(result.status).toBe("success");
-      expect(fs.pathExists).toHaveBeenCalledWith(expect.stringContaining("/tmp/test"));
+      expect(fs.pathExists).toHaveBeenCalledWith(expect.stringContaining("/app/test"));
   });
 });

@@ -180,7 +180,7 @@ describe("fastlane command", () => {
   it("uses specified working directory", async () => {
       loadConfig.mockResolvedValue(FASTLANE_CONFIG);
       fs.pathExists.mockResolvedValue(false);
-      await runFastlaneSetupCommand({ force: false, cwd: "/tmp/test-project" });
+      await runFastlaneSetupCommand({ force: false, cwd: "/app/test-project" });
       expect(fs.writeFile).toHaveBeenCalled();
   });
 
