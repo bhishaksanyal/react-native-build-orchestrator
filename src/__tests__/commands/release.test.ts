@@ -91,7 +91,7 @@ describe("release command", () => {
 
     execa.mockReturnValue({
         all: (async function* () { yield Buffer.from("log line\n"); })(),
-        then: (cb: any) => Promise.resolve({ exitCode: 0 }).then(cb)
+        exitCode: 0
     });
   });
 
@@ -147,7 +147,7 @@ describe("release command", () => {
   it("handles fastlane failure", async () => {
       execa.mockReturnValue({
           all: (async function* () { yield Buffer.from("error\n"); })(),
-          then: (cb: any) => Promise.resolve({ exitCode: 1 }).then(cb)
+          exitCode: 1
       });
       await expect(runReleaseCommand({
           env: "prod",
@@ -294,7 +294,7 @@ describe("release command", () => {
           yield Buffer.from("random stdout line\n");
           yield Buffer.from("\n"); // Empty line
         })(),
-        then: (cb: any) => Promise.resolve({ exitCode: 0 }).then(cb)
+        exitCode: 0
       });
 
       const result = await runReleaseCommand({

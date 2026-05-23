@@ -66,7 +66,7 @@ describe("run command", () => {
 
     execa.mockReturnValue({
         all: (async function* () { yield Buffer.from("log line\n"); })(),
-        then: (cb: any) => Promise.resolve({ exitCode: 0 }).then(cb)
+        exitCode: 0
     });
   });
 
@@ -118,7 +118,7 @@ describe("run command", () => {
               yield Buffer.from("non-modular-include-in-framework-module\n");
               yield Buffer.from("GeneratedDotEnv.m\n");
           })(),
-          then: (cb: any) => Promise.resolve({ exitCode: 1 }).then(cb)
+          exitCode: 1
       });
       await expect(runAppCommand({
           env: "dev",
@@ -205,7 +205,7 @@ describe("run command", () => {
           yield Buffer.from("error message\n");
           yield Buffer.from("\n");
         })(),
-        then: (cb: any) => Promise.resolve({ exitCode: 0 }).then(cb)
+        exitCode: 0
       });
 
       const result = await runAppCommand({
@@ -255,7 +255,7 @@ describe("run command", () => {
           yield Buffer.from("CpResource resource\n");
           yield Buffer.from("random line\n");
         })(),
-        then: (cb: any) => Promise.resolve({ exitCode: 0 }).then(cb)
+        exitCode: 0
       });
 
       const result = await runAppCommand({
