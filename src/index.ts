@@ -115,6 +115,7 @@ program
   .option("--fast", "Apply platform fast-track flags for faster archives/builds")
   .option("--raw-logs", "Print raw logs instead of styled output")
   .option("--dry-run", "Preview build command and skip upload")
+  .option("--summary", "Print a concise human-readable summary after a successful release")
   .option("--ci", "Run in CI mode (non-interactive, skips confirmations)")
   .action(
     async (options: {
@@ -131,6 +132,7 @@ program
       fast?: boolean;
       rawLogs?: boolean;
       dryRun?: boolean;
+      summary?: boolean;
       ci?: boolean;
     }) => {
       await withErrorHandler("release", options.ci, () => runReleaseCommand(options));

@@ -165,6 +165,23 @@ yarn rnbuild release --env production --platform android --dry-run
 
 # Fast mode: apply platform optimizations for faster builds
 yarn rnbuild release --env production --platform ios --type store --fast
+
+# Print a concise summary after the release completes
+yarn rnbuild release --env production --platform android --type store --summary
+```
+
+The `--summary` flag prints a compact, human-readable summary block after a successful release, showing project name, environment, platform, flavor, artifact path, upload destination, and status:
+
+```
+── Release Summary ──────────────────────────────────────
+  Project:      MyApp
+  Environment:  production
+  Platform:     android
+  Build type:   store
+  Artifact:     android/app/build/outputs/bundle/release/app-release.aab
+  Upload:       upload_store → internal
+  Status:       ✔ success
+──────────────────────────────────────────────────────────
 ```
 
 ## Configuration
@@ -361,6 +378,6 @@ The following items are intentionally kept as future work so maintainers and ope
 ### Good First Contribution Ideas
 
 - ~~Add JSON schema docs for `.rnbuildrc.yml`~~
-- Add `rnbuild release --summary` output mode
+- ~~Add `rnbuild release --summary` output mode~~
 - Add richer lane option docs and examples in README
 - Improve `doctor` checks for missing Fastlane/Bundler prerequisites

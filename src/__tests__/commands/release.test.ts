@@ -285,6 +285,44 @@ describe("release command", () => {
       expect(result.message).toBe("Upload skipped by user");
     });
 
+    it("prints summary when --summary flag is set", async () => {
+      const stdoutSpy = jest.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      await runReleaseCommand({
+        env: "prod",
+        platform: "android",
+        type: "store",
+        summary: true,
+        ci: true
+      });
+
+      expect(stdoutSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Release Summary")
+      );
+      expect(stdoutSpy).toHaveBeenCalledWith(
+        expect.stringContaining("MyApp")
+      );
+
+      stdoutSpy.mockRestore();
+    });
+
+    it("does not print summary when --summary is not set", async () => {
+      const stdoutSpy = jest.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      await runReleaseCommand({
+        env: "prod",
+        platform: "android",
+        type: "store",
+        ci: true
+      });
+
+      expect(stdoutSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Release Summary")
+      );
+
+      stdoutSpy.mockRestore();
+    });
+
     it("covers rawLogs enabled and styleLine output branches", async () => {
       execa.mockReturnValue({
         all: (async function* () {

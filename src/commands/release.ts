@@ -41,6 +41,7 @@ interface ReleaseOptions {
   rawLogs?: boolean;
   dryRun?: boolean;
   ci?: boolean;
+  summary?: boolean;
 }
 
 function toFastlaneOption(key: string, value: string): string {
@@ -489,6 +490,24 @@ export async function runReleaseCommand(options: ReleaseOptions): Promise<Releas
   } catch (error) {
     s.stop(pc.red("Fastlane upload failed."));
     throw error;
+  }
+
+  if (options.summary) {
+    const lines = [
+      pc.bold(pc.cyan("── Release Summary ──────────────────────────────────────")),
+      `  Project:      ${pc.bold(config.projectName)}`,
+      `  Environment:  ${selectedEnv}`,
+      `  Platform:     ${platform}`,
+      selectedFlavor ? `  Flavor:       ${selectedFlavor}` : null,
+      `  Build type:   ${selectedType}`,
+      `  Artifact:     ${resolvedArtifactPath}`,
+      `  Upload:       ${selectedLane} → ${selectedTrack}`,
+      `  Status:       ${pc.green("✔ success")}`,
+      pc.bold(pc.cyan("──────────────────────────────────────────────────────────"))
+    ]
+      .filter(Boolean)
+      .join("\n");
+    process.stdout.write("\n" + lines + "\n\n");
   }
 
   outro(pc.bold(pc.green("Release completed.")));
