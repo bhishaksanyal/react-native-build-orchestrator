@@ -7,6 +7,10 @@ import type { RNBuildConfig } from "../types.js";
 
 export const CONFIG_FILE = ".rnbuildrc.yml";
 
+/** URL to the published JSON Schema for .rnbuildrc.yml */
+const SCHEMA_URL =
+  "https://raw.githubusercontent.com/bhishaksanyal/react-native-build-orchestrator/main/schemas/rnbuildrc.schema.json";
+
 export async function loadConfig(projectDir: string): Promise<RNBuildConfig> {
   const configPath = path.join(projectDir, CONFIG_FILE);
   const exists = await fs.pathExists(configPath);
@@ -21,7 +25,12 @@ export async function loadConfig(projectDir: string): Promise<RNBuildConfig> {
 
 export async function writeConfig(projectDir: string, config: RNBuildConfig): Promise<string> {
   const configPath = path.join(projectDir, CONFIG_FILE);
-  const serialized = yaml.dump(config, {
+
+  // Inject $schema reference for IDE autocompletion and validation.
+  // The key is ignored by Zod parsing (unknown keys are stripped).
+  const output = { $schema: SCHEMA_URL, ...config } as Record<string, unknown>;
+
+  const serialized = yaml.dump(output, {
     noRefs: true,
     lineWidth: 120,
     sortKeys: false

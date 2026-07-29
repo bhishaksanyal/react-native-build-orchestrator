@@ -171,9 +171,12 @@ yarn rnbuild release --env production --platform ios --type store --fast
 
 Generated config file: `.rnbuildrc.yml`
 
+> **JSON Schema** — A [JSON Schema](schemas/rnbuildrc.schema.json) is available for `.rnbuildrc.yml`. Most YAML editors (VS Code, JetBrains, Neovim with YAML plugins) will automatically pick it up from the `$schema` key in the file and provide autocompletion, hover descriptions, and validation as you edit.
+
 Minimal example:
 
 ```yaml
+$schema: https://raw.githubusercontent.com/bhishaksanyal/react-native-build-orchestrator/main/schemas/rnbuildrc.schema.json
 projectName: my-rn-app
 defaultEnvironment: development
 environments:
@@ -357,7 +360,7 @@ The following items are intentionally kept as future work so maintainers and ope
 
 ### Good First Contribution Ideas
 
-- Add JSON schema docs for `.rnbuildrc.yml`
+- ~~Add JSON schema docs for `.rnbuildrc.yml`~~
 - Add `rnbuild release --summary` output mode
 - Add richer lane option docs and examples in README
 - Improve `doctor` checks for missing Fastlane/Bundler prerequisites

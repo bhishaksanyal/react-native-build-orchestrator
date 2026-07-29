@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/bhishaksanyal/react-native-build-orchestrator/main/schemas/rnbuildrc.schema.json",
+  "title": "RNBuildConfig",
+  "description": "Schema for .rnbuildrc.yml — the configuration file for react-native-build-orchestrator (rnbuild). Defines environments, build profiles, platform flavors, and Fastlane upload defaults for React Native projects.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema URL (optional, used by editors for autocompletion and validation)"
+    },
+    "projectName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name of the React Native project. Used in command template substitutions ({{PROJECT_NAME}}) and iOS scheme defaults."
+    },
+    "defaultEnvironment": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Key matching one of the configured environments. Used as the default when no --env flag is provided. Must reference a key in the `environments` map — enforced by the rnbuild CLI at runtime (cross-reference constraints cannot be expressed in JSON Schema alone).",
+      "examples": ["development", "production", "staging"]
+    },
+    "environments": {
+      "type": "object",
+      "description": "Map of environment names to their configuration. Each key is an environment name (e.g., development, staging, production).",
+      "additionalProperties": {
+        "$ref": "#/definitions/EnvironmentConfig"
+      },
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "flavors": {
+      "type": "object",
+      "description": "Platform-specific flavors/schemes for white-label or multi-variant builds.",
+      "properties": {
+        "android": {
+          "$ref": "#/definitions/FlavorPlatformConfig",
+          "description": "Android product flavors (defined in build.gradle productFlavors block)."
+        },
+        "ios": {
+          "$ref": "#/definitions/FlavorPlatformConfig",
+          "description": "iOS build schemes (detected from .xcscheme files in the ios/ directory)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "fastlane": {
+      "type": "object",
+      "description": "Fastlane upload configuration for automated store deployments.",
+      "properties": {
+        "android": {
+          "type": "object",
+          "description": "Android-specific Fastlane settings.",
+          "properties": {
+            "lane": {
+              "type": "string",
+              "description": "Fastlane lane name for Android uploads (e.g., upload_store)."
+            },
+            "defaultTrack": {
+              "type": "string",
+              "description": "Default Google Play track (e.g., internal, alpha, beta, production).",
+              "examples": ["internal", "alpha", "beta", "production"]
+            },
+            "packageName": {
+              "type": "string",
+              "description": "Android package name (e.g., com.example.app). Used in the generated Appfile."
+            }
+          },
+          "additionalProperties": false
+        },
+        "ios": {
+          "type": "object",
+          "description": "iOS-specific Fastlane settings.",
+          "properties": {
+            "lane": {
+              "type": "string",
+              "description": "Fastlane lane name for iOS uploads (e.g., upload_store)."
+            },
+            "defaultTrack": {
+              "type": "string",
+              "description": "Default App Store Connect destination (e.g., testflight, app_store).",
+              "examples": ["testflight", "app_store"]
+            },
+            "appIdentifier": {
+              "type": "string",
+              "description": "iOS app bundle identifier (e.g., com.example.app). Used in the generated Appfile."
+            },
+            "appleId": {
+              "type": "string",
+              "description": "Apple ID email for signing and uploads."
+            },
+            "teamId": {
+              "type": "string",
+              "description": "Apple Developer Team ID."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "builds": {
+      "type": "object",
+      "description": "Build profiles for each build type. Three profiles are required: development, adhoc, and store.",
+      "properties": {
+        "development": {
+          "$ref": "#/definitions/BuildProfile",
+          "description": "Development build profile — typically debug builds for local testing."
+        },
+        "adhoc": {
+          "$ref": "#/definitions/BuildProfile",
+          "description": "Ad-hoc build profile — typically release builds for internal distribution."
+        },
+        "store": {
+          "$ref": "#/definitions/BuildProfile",
+          "description": "Store build profile — typically archive builds for app store submission."
+        }
+      },
+      "required": ["development", "adhoc", "store"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["projectName", "defaultEnvironment", "environments", "builds"],
+  "additionalProperties": false,
+  "definitions": {
+    "BuildTargetConfig": {
+      "type": "object",
+      "description": "Platform-specific build configuration for a single build type.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this build target is active. Set to false to skip this platform for this build type."
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Shell command to execute for this build target. Supports template variables: {{PROJECT_NAME}}, {{ENV_NAME}}, {{BUILD_TYPE}}, {{PLATFORM}}, {{FLAVOR}}, {{FLAVOR_NAME}}, {{FLAVOR_VALUE}}, {{FLAVOR_TASK}}, and any env var key.",
+          "examples": [
+            "cd android && ./gradlew bundleRelease",
+            "xcodebuild -workspace ios/{{PROJECT_NAME}}.xcworkspace -scheme {{PROJECT_NAME}} -configuration Release -archivePath ios/build/{{PROJECT_NAME}}.xcarchive archive"
+          ]
+        },
+        "outputHint": {
+          "type": "string",
+          "description": "Expected output path or artifact hint. Displayed to the user after a successful build. Supports all template variables.",
+          "examples": [
+            "android/app/build/outputs/bundle/release/app-release.aab",
+            "ios/build/{{PROJECT_NAME}}.xcarchive"
+          ]
+        },
+        "androidArtifact": {
+          "type": "string",
+          "description": "Android output artifact type. Only relevant for Android build targets.",
+          "enum": ["apk", "bundle"]
+        }
+      },
+      "required": ["enabled", "command"],
+      "additionalProperties": false
+    },
+    "BuildProfile": {
+      "type": "object",
+      "description": "Build configuration for both platforms under a single build type.",
+      "properties": {
+        "android": {
+          "$ref": "#/definitions/BuildTargetConfig",
+          "description": "Android build target configuration."
+        },
+        "ios": {
+          "$ref": "#/definitions/BuildTargetConfig",
+          "description": "iOS build target configuration."
+        }
+      },
+      "additionalProperties": false
+    },
+    "EnvironmentConfig": {
+      "type": "object",
+      "description": "Configuration for a single environment.",
+      "properties": {
+        "envFile": {
+          "type": "string",
+          "description": "Path to a .env file relative to the project root. Variables from this file are loaded and exported at runtime.",
+          "examples": [".env.development", ".env.production", ".env.staging"]
+        },
+        "vars": {
+          "type": "object",
+          "description": "Additional environment variables as key-value pairs. Merged with and takes precedence over variables from envFile.",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "examples": [
+            {
+              "BASE_URL": "https://api.example.com",
+              "API_KEY": "your-api-key"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "FlavorPlatformConfig": {
+      "type": "object",
+      "description": "Flavor configuration for a single platform (Android or iOS). The default flavor value must match one of the options.",
+      "properties": {
+        "default": {
+          "type": "string",
+          "description": "Default flavor/scheme to use when none is explicitly specified. Must match one of the configured options."
+        },
+        "options": {
+          "type": "array",
+          "description": "Available flavor/scheme names detected from the project or manually configured.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [
+            ["free", "paid"],
+            ["clientA", "clientB", "clientC"]
+          ]
+        },
+        "commandMap": {
+          "type": "object",
+          "description": "Maps flavor names to Gradle task names or Xcode scheme names. Each key must correspond to an option in the `options` array. If not provided, the flavor name is used directly.",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          },
+          "examples": [
+            {
+              "free": "FreeFlavor",
+              "paid": "PaidFlavor"
+            }
+          ]
+        }
+      },
+      "required": ["options"],
+      "additionalProperties": false
+    }
+  }
+}
