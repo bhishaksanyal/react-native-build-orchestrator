@@ -36,11 +36,15 @@
       "description": "Platform-specific flavors/schemes for white-label or multi-variant builds.",
       "properties": {
         "android": {
-          "$ref": "#/definitions/FlavorPlatformConfig",
+          "allOf": [
+            { "$ref": "#/definitions/FlavorPlatformConfig" }
+          ],
           "description": "Android product flavors (defined in build.gradle productFlavors block)."
         },
         "ios": {
-          "$ref": "#/definitions/FlavorPlatformConfig",
+          "allOf": [
+            { "$ref": "#/definitions/FlavorPlatformConfig" }
+          ],
           "description": "iOS build schemes (detected from .xcscheme files in the ios/ directory)."
         }
       },
@@ -106,15 +110,21 @@
       "description": "Build profiles for each build type. Three profiles are required: development, adhoc, and store.",
       "properties": {
         "development": {
-          "$ref": "#/definitions/BuildProfile",
+          "allOf": [
+            { "$ref": "#/definitions/BuildProfile" }
+          ],
           "description": "Development build profile — typically debug builds for local testing."
         },
         "adhoc": {
-          "$ref": "#/definitions/BuildProfile",
+          "allOf": [
+            { "$ref": "#/definitions/BuildProfile" }
+          ],
           "description": "Ad-hoc build profile — typically release builds for internal distribution."
         },
         "store": {
-          "$ref": "#/definitions/BuildProfile",
+          "allOf": [
+            { "$ref": "#/definitions/BuildProfile" }
+          ],
           "description": "Store build profile — typically archive builds for app store submission."
         }
       },
@@ -164,12 +174,17 @@
       "description": "Build configuration for both platforms under a single build type.",
       "properties": {
         "android": {
-          "$ref": "#/definitions/BuildTargetConfig",
+          "allOf": [
+            { "$ref": "#/definitions/BuildTargetConfig" }
+          ],
           "description": "Android build target configuration."
         },
         "ios": {
-          "$ref": "#/definitions/BuildTargetConfig",
-          "description": "iOS build target configuration."
+          "allOf": [
+            { "$ref": "#/definitions/BuildTargetConfig" },
+            { "not": { "required": ["androidArtifact"] } }
+          ],
+          "description": "iOS build target configuration. The 'androidArtifact' property is not valid for iOS targets."
         }
       },
       "additionalProperties": false
