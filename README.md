@@ -334,6 +334,8 @@ See the [GitHub Actions example](examples/github-actions/release.yml) for a comp
 
 ### Troubleshooting
 
+> 📖 For detailed Fastlane troubleshooting, debugging commands, authentication validation, and custom Fastfile examples, see the **[Fastlane Troubleshooting Guide](FASTLANE_GUIDE.md)**.
+
 | Error | Likely cause | Fix |
 |---|---|---|
 | `Fastlane upload failed` | Build artifact not found or Fastlane exit code non-zero | Check `artifact_path` exists and Fastlane credentials are set |
