@@ -143,7 +143,205 @@ yarn rnbuild fastlane setup
 yarn rnbuild fastlane setup --force
 ```
 
+## Fastlane Lane Options
+
+When `rnbuild release` runs the upload phase, it invokes a Fastlane lane and passes runtime options via command-line parameters. Understanding these options lets you customize the generated `Fastfile` for your workflow.
+
+### How the upload command is built
+
+The release command constructs a Fastlane invocation like this:
+
+```bash
+bundle exec fastlane android upload_store \
+  track:"internal" \
+  artifact_type:"aab" \
+  artifact_path:"/path/to/app-release.aab"
+```
+
+Each parameter after the lane name is a Fastlane option passed as `key:"value"` pairs. The generated `Fastfile` reads these options with `options[:track]`, `options[:artifact_type]`, and `options[:artifact_path]`.
+
+### Options reference
+
+| Option | Type | Default | Platform | Description |
+|---|---|---|---|---|
+| `track` | String | Config default or `"internal"` (Android) / `"testflight"` (iOS) | Both | Store track or destination. Android: `internal`, `alpha`, `beta`, `production`. iOS: `testflight`, `app_store`. |
+| `artifact_type` | String | `"aab"` for Android bundle, `"apk"` for Android APK, `"ipa"` for iOS | Both | Type of build artifact being uploaded. Used by the generated Fastfile to decide `supply` vs `pilot`/`deliver` arguments. |
+| `artifact_path` | String | Derived from `outputHint` in config or prompted | Both | Absolute or relative path to the build artifact file. |
+
+### How the generated Fastfile works
+
+The `rnbuild fastlane setup` command generates a `Fastfile` with two platform-specific lanes:
+
+**Android (`upload_store` by default):**
+- Uses the `supply` action to upload to Google Play Console.
+- Auto-detects whether the artifact is an AAB or APK based on `artifact_type` and file extension.
+- Skips metadata, images, and screenshots uploads (edit the Fastfile to include them).
+- Accepts a custom `track` option (defaults to your configured default track).
+
+```ruby
+platform :android do
+  lane :upload_store do |options|
+    track_name = options[:track] || "internal"
+    artifact_path = options[:artifact_path]
+
+    supply_options = {
+      track: track_name,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    }
+
+    if artifact_path && !artifact_path.to_s.empty?
+      normalized = artifact_path.to_s.downcase
+      if options[:artifact_type].to_s == "aab" || normalized.end_with?(".aab")
+        supply_options[:aab] = artifact_path
+      else
+        supply_options[:apk] = artifact_path
+      end
+    end
+
+    supply(supply_options)
+  end
+end
+```
+
+**iOS (`upload_store` by default):**
+- Uses `deliver` for App Store Connect submissions (with `submit_for_review: false` by default).
+- Uses `pilot` (TestFlight) for TestFlight destination.
+- Accepts a custom `track` option (`"testflight"` or `"app_store"`).
+
+```ruby
+platform :ios do
+  lane :upload_store do |options|
+    destination = options[:track] || "testflight"
+    artifact_path = options[:artifact_path]
+
+    if destination == "app_store"
+      deliver_options = {
+        submit_for_review: false,
+        automatic_release: false,
+        skip_metadata: true,
+        skip_screenshots: true
+      }
+      deliver_options[:ipa] = artifact_path if artifact_path
+      deliver(deliver_options)
+    else
+      pilot_options = { skip_waiting_for_build_processing: true }
+      pilot_options[:ipa] = artifact_path if artifact_path
+      pilot(pilot_options)
+    end
+  end
+end
+```
+
+### Customizing lanes
+
+Edit the generated `fastlane/Fastfile` to add custom behavior while keeping the same lane name so `rnbuild release --lane` continues to work:
+
+```ruby
+# Custom Android lane with changelog upload
+lane :upload_store do |options|
+  # ... standard upload logic ...
+
+  # Add custom steps
+  upload_to_play_store(
+    track: options[:track] || "internal",
+    aab: options[:artifact_path],
+    release_status: "completed"
+  )
+end
+```
+
+### Using multiple lanes
+
+Configure multiple lanes in your `Fastfile` and select them at release time:
+
+```bash
+# Default store upload
+yarn rnbuild release --env production --platform android --type store --lane upload_store
+
+# Nightly build with different upload logic
+yarn rnbuild release --env nightly --platform android --type store --lane upload_nightly
+
+# Beta deployment with custom track
+yarn rnbuild release --env staging --platform ios --type adhoc --lane upload_beta --track testflight
+```
+
+Set the default lane per platform in `.rnbuildrc.yml`:
+
+```yaml
+fastlane:
+  android:
+    lane: upload_store
+    defaultTrack: internal
+    packageName: com.example.app
+  ios:
+    lane: upload_store
+    defaultTrack: testflight
+    appIdentifier: com.example.app
+    appleId: developer@example.com
+    teamId: ABC123DEFG
+```
+
+### Fastlane authentication
+
+The upload actions require proper credentials in your CI environment or local keychain:
+
+**Android (Google Play):**
+
+```bash
+# Service account JSON key (recommended)
+export SUPPLY_JSON_KEY_DATA='{"type": "service_account", ...}'
+
+# Or file-based authentication
+# export SUPPLY_JSON_KEY=/path/to/key.json
+```
+
+**iOS (App Store Connect):**
+
+```bash
+# API Key authentication (recommended over apple_id/password)
+export APP_STORE_CONNECT_API_KEY_KEY_ID="ABC123DEFG"
+export APP_STORE_CONNECT_API_KEY_ISSUER_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+export APP_STORE_CONNECT_API_KEY_KEY="path/to/AuthKey_ABC123DEFG.p8"
+
+# Or use apple_id + app_specific_password (legacy)
+export FASTLANE_USER="developer@example.com"
+export FASTLANE_PASSWORD="@env MY_APP_SPECIFIC_PASSWORD"
+```
+
+### Bundler setup for CI
+
+For reproducible Fastlane runs across machines, use Bundler:
+
+```ruby
+# Gemfile
+source "https://rubygems.org"
+
+gem "fastlane"
+```
+
+```bash
+bundle install
+bundle exec fastlane add_plugin supply  # Android only
+```
+
+The release command auto-detects `bundle exec fastlane` and falls back to `fastlane` if Bundler isn't available.
+
+### Full CI pipeline example
+
+See the [GitHub Actions example](examples/github-actions/release.yml) for a complete build-and-release workflow covering both platforms with all secrets configured.
+
+### Troubleshooting
+
 > 📖 For detailed Fastlane troubleshooting, debugging commands, authentication validation, and custom Fastfile examples, see the **[Fastlane Troubleshooting Guide](FASTLANE_GUIDE.md)**.
+
+| Error | Likely cause | Fix |
+|---|---|---|
+| `Fastlane upload failed` | Build artifact not found or Fastlane exit code non-zero | Check `artifact_path` exists and Fastlane credentials are set |
+| `Artifact path is required` | No `outputHint` in config and no `--artifact-path` flag | Add `outputHint` to your build target or pass `--artifact-path` |
+| `No flavors configured` | `--flavor` used but no flavors in config | Run `rnbuild flavor detect` or configure flavors in `.rnbuildrc.yml` |
+| Fastlane credential errors | Missing environment variables for store authentication | Set `SUPPLY_JSON_KEY_DATA` (Android) or `APP_STORE_CONNECT_*` (iOS) |
 
 ### release
 
@@ -381,5 +579,5 @@ The following items are intentionally kept as future work so maintainers and ope
 
 - ~~Add JSON schema docs for `.rnbuildrc.yml`~~
 - ~~Add `rnbuild release --summary` output mode~~
-- Add richer lane option docs and examples in README
+- ~~Add richer lane option docs and examples in README~~
 - Improve `doctor` checks for missing Fastlane/Bundler prerequisites
