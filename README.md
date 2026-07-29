@@ -143,6 +143,8 @@ yarn rnbuild fastlane setup
 yarn rnbuild fastlane setup --force
 ```
 
+> 📖 For detailed Fastlane troubleshooting, debugging commands, authentication validation, and custom Fastfile examples, see the **[Fastlane Troubleshooting Guide](FASTLANE_GUIDE.md)**.
+
 ### release
 
 Builds and uploads to store in one unified pipeline. **Always builds first, then uploads** for any chosen environment, platform, flavor, and artifact type.
