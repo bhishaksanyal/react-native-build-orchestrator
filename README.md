@@ -578,4 +578,4 @@ The following items are intentionally kept as future work so maintainers and ope
 - ~~Add JSON schema docs for `.rnbuildrc.yml`~~
 - ~~Add `rnbuild release --summary` output mode~~
 - ~~Add richer lane option docs and examples in README~~
-- Improve `doctor` checks for missing Fastlane/Bundler prerequisites
+- ~~Improve `doctor` checks for missing Fastlane/Bundler prerequisites~~
