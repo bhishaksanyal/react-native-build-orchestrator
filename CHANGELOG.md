@@ -1,3 +1,15 @@
+## [1.6.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.5.0...v1.6.0) (2026-07-29)
+
+### ✨ Features
+
+* add JSON Schema for .rnbuildrc.yml configuration ([eb196a3](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/eb196a3641156ee8f673b0f6e2ea50e204fabc34))
+
+### 🐛 Bug Fixes
+
+* do not stop CI pipeline if coverage upload fails ([acb6258](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/acb6258fdf8c64f963d3afd82e82a8c4f25427e2))
+* skip Codecov CLI GPG verification in CI ([25cb457](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/25cb45755b29caec4cf3cf01d15593a06eb25095))
+* wrap $ref with allOf to preserve sibling descriptions in draft-07, forbid androidArtifact on iOS targets ([0ca5bd5](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/0ca5bd5271930af357cff253a7402a89c53ac6c6))
+
 ## [1.5.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.4.0...v1.5.0) (2026-05-23)
 
 ### ✨ Features
