@@ -98,6 +98,12 @@ export interface DoctorSummary extends CommandResult {
     android: boolean;
     ios: boolean;
     config: boolean;
+    ruby: boolean;
+    bundler: boolean;
+    fastlaneCli: boolean;
+    gemfile: boolean;
+    fastlaneDir: boolean;
+    fastlaneConfig: boolean;
   };
 }
 
