@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.6.0...v1.7.0) (2026-07-29)
+
+### ✨ Features
+
+* add rnbuild release --summary output mode ([e4da75e](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/e4da75e37fe6cf1fbb185c677046ad7a71be92a2))
+
 ## [1.6.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.5.0...v1.6.0) (2026-07-29)
 
 ### ✨ Features
