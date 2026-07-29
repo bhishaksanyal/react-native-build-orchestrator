@@ -1,3 +1,14 @@
+## [1.8.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.7.0...v1.8.0) (2026-07-29)
+
+### ✨ Features
+
+* improve doctor checks for missing Fastlane/Bundler prerequisites ([59a030f](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/59a030f3376fc8e5ac4dceb93e9bbeae9b79facd))
+
+### 📚 Documentation
+
+* add dedicated Fastlane troubleshooting guide ([33d4b8f](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/33d4b8f7c3a4fcbd37c59c3d1edb8cb170adbd18))
+* add richer Fastlane lane option docs and examples ([08a3032](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/08a30327367d33292222efb71bf48bad454152a7))
+
 ## [1.7.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.6.0...v1.7.0) (2026-07-29)
 
 ### ✨ Features
