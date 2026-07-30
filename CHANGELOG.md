@@ -1,3 +1,9 @@
+## [1.8.1](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.8.0...v1.8.1) (2026-07-30)
+
+### 🐛 Bug Fixes
+
+* disable yarn lifecycle scripts in CI to address S6505 security lint rule ([f1e66d6](https://github.com/bhishaksanyal/react-native-build-orchestrator/commit/f1e66d67f030910bf1afe5a66f81515be15336e1))
+
 ## [1.8.0](https://github.com/bhishaksanyal/react-native-build-orchestrator/compare/v1.7.0...v1.8.0) (2026-07-29)
 
 ### ✨ Features
