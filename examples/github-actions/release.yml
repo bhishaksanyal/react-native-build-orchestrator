@@ -39,7 +39,10 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --immutable --check-cache
+
+      - name: Build package
+        run: yarn build
 
       # Android Specific Setup
       - name: Set up Java

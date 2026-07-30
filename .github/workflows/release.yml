@@ -37,7 +37,7 @@ jobs:
           corepack prepare yarn@3.6.0 --activate
 
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --immutable --check-cache
 
       - name: Build package
         run: yarn build
