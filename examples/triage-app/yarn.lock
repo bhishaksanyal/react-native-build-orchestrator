@@ -2175,11 +2175,11 @@ __metadata:
   linkType: hard
 
 "baseline-browser-mapping@npm:^2.10.12":
-  version: 2.10.21
-  resolution: "baseline-browser-mapping@npm:2.10.21"
+  version: 2.11.22
+  resolution: "baseline-browser-mapping@npm:2.11.22"
   bin:
     baseline-browser-mapping: dist/cli.cjs
-  checksum: 534e122d9ebbdac9f509eb018d2a6d6c9340dd7bdc100da5815b417e9210337906f579ce7239d09689e6c4e3af7329520827a0e332f18556c46724f484878d23
+  checksum: fcea838ca33592b1f60cf936a95006f9ff8da7a7fb13218f46b32d7b39669907aad06adf4b52d9a83e5daa56558a7004c14af138c0542bdeda1b68fff2085bb2
   languageName: node
   linkType: hard
 
@@ -4524,8 +4524,8 @@ __metadata:
   linkType: hard
 
 "react-native-build-orchestrator@file:../..::locator=triage-app%40workspace%3A.":
-  version: 1.8.0
-  resolution: "react-native-build-orchestrator@file:../..#../..::hash=314c62&locator=triage-app%40workspace%3A."
+  version: 1.8.1
+  resolution: "react-native-build-orchestrator@file:../..#../..::hash=0b59ce&locator=triage-app%40workspace%3A."
   dependencies:
     "@clack/prompts": ^0.7.0
     cli-table: ^0.3.11
@@ -4537,7 +4537,7 @@ __metadata:
     zod: ^3.25.76
   bin:
     rnbuild: dist/index.js
-  checksum: d94cdc1c03f5d6632c256da73eaf2f5627db3a1eaefc5a369dd762a6ae4f6afbca198b94dafad72f571efd53d9ac32a7cf213346bfa096891779d003276d0d9e
+  checksum: 344fe423e93358e3c31386b8ed0f9b2ad657b7e8e77c7b246c5127175c679cbe97932c2f03d6c0e7bc5e97f29ffa3b0b32198f521e285de76abd758c95f558af
   languageName: node
   linkType: hard
 
